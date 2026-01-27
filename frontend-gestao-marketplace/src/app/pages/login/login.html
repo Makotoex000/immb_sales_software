@@ -1,0 +1,63 @@
+<div class="flex h-screen bg-white">
+  <!-- Lado Esquerdo - Logo e Imagem -->
+  <div class="w-1/2 bg-gradient-to-br from-green-600 to-green-700 flex flex-col justify-center items-center p-8">
+    <div class="text-center">
+      <div class="bg-white text-green-600 font-bold text-6xl px-8 py-6 rounded-2xl mb-8 inline-block">
+        IMMB
+      </div>
+      <h2 class="font-bold text-3xl text-white mb-2">Gerenciamento de Vendas</h2>
+      <h4 class="text-green-100 text-lg">Cantina da Igreja</h4>
+    </div>
+  </div>
+
+  <!-- Lado Direito - Formulário de Login -->
+  <div class="w-1/2 flex flex-col justify-center items-center p-8 bg-white">
+    <div class="w-full max-w-md">
+      <!-- Títulos -->
+      <div class="mb-8">
+        <h2 class="font-bold text-3xl text-gray-800 mb-2">Acesse sua conta</h2>
+        <p class="font-light text-sm text-gray-600">Informe seu e-mail e senha para entrar</p>
+      </div>
+
+      <!-- Inputs de Email e Senha -->
+      <div class="flex flex-col gap-6 mb-8">
+        <!-- Input de Email -->
+        <div class="flex flex-col gap-2">
+          <label class="text-gray-700 text-xs font-semibold">E-MAIL</label>
+          <input
+            [(ngModel)]="email"
+            type="email"
+            placeholder="seu.email@example.com"
+            class="w-full px-4 py-3 border-b-2 border-green-300 focus:border-green-600 focus:outline-none text-gray-700 placeholder-gray-400 transition-colors" />
+        </div>
+
+        <!-- Input de Senha -->
+        <div class="flex flex-col gap-2">
+          <label class="text-gray-700 text-xs font-semibold">SENHA</label>
+          <input
+            [(ngModel)]="senha"
+            type="password"
+            placeholder="Sua senha de acesso"
+            class="w-full px-4 py-3 border-b-2 border-green-300 focus:border-green-600 focus:outline-none text-gray-700 placeholder-gray-400 transition-colors" />
+        </div>
+
+        <!-- Mensagem de Erro -->
+        <p *ngIf="erroLogin" class="font-semibold text-red-500 text-sm">{{ erroLogin }}</p>
+      </div>
+
+      <!-- Botão de Login -->
+      <button
+        (click)="fazerLogin()"
+        [disabled]="carregando"
+        class="w-full flex justify-center items-center p-4 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-all duration-200 ease-in-out active:translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
+        <span *ngIf="!carregando">Acessar</span>
+        <span *ngIf="carregando">Carregando...</span>
+      </button>
+
+      <!-- Link de Recuperação de Senha -->
+      <p class="text-center text-sm text-gray-600 mt-6">
+        Não tem uma conta? <span class="text-green-600 font-semibold cursor-pointer">Criar conta</span>
+      </p>
+    </div>
+  </div>
+</div>

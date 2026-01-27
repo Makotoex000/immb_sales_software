@@ -1,0 +1,28 @@
+<div class="flex flex-col h-screen bg-white">
+  <!-- Header -->
+  <app-header (navegacao)="mudarPagina($event)"></app-header>
+
+  <!-- Conteúdo Principal -->
+  <div class="flex-1 overflow-auto">
+    <!-- Página de Vendas -->
+    <app-vendas *ngIf="paginaAtual === 'vendas'"></app-vendas>
+
+    <!-- Página de Novo Produto -->
+    <app-novo-produto
+      *ngIf="paginaAtual === 'novo-produto'"
+      (produtoAdicionado)="onProdutoAdicionado()"
+      (cancelado)="mudarPagina('vendas')"></app-novo-produto>
+
+    <!-- Página de Fiado -->
+    <app-fiado *ngIf="paginaAtual === 'fiado'"></app-fiado>
+
+    <!-- Página de Histórico -->
+    <app-historico *ngIf="paginaAtual === 'historico'"></app-historico>
+
+    <!-- Página de Fechamento -->
+    <app-fechamento *ngIf="paginaAtual === 'fechamento'"></app-fechamento>
+
+    <!-- Página de Gerenciamento -->
+    <app-gerenciamento *ngIf="paginaAtual === 'gerenciamento'"></app-gerenciamento>
+  </div>
+</div>

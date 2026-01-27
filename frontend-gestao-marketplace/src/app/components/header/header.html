@@ -1,0 +1,87 @@
+<div class="w-full flex justify-between items-center p-4 border-b-2 border-green-200 bg-white">
+  <!-- Logo IMMB -->
+  <div class="flex items-center">
+    <div class="bg-green-600 text-white font-bold text-2xl px-4 py-2 rounded-lg">IMMB</div>
+  </div>
+
+  <!-- Menu de Navegação -->
+  <div class="flex items-center gap-4">
+    <!-- Botão Produtos -->
+    <button
+      (click)="navegarPara('produtos')"
+      [class.active]="paginaAtual === 'produtos'"
+      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
+      [ngClass]="paginaAtual === 'produtos' 
+        ? 'bg-green-600 text-white' 
+        : 'bg-green-50 text-green-700 hover:bg-green-100'">
+      <span class="text-sm font-medium">Produtos</span>
+    </button>
+
+    <!-- Botão Vendas -->
+    <button
+      (click)="navegarPara('vendas')"
+      [class.active]="paginaAtual === 'vendas'"
+      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
+      [ngClass]="paginaAtual === 'vendas' 
+        ? 'bg-green-600 text-white' 
+        : 'bg-green-50 text-green-700 hover:bg-green-100'">
+      <span class="text-sm font-medium">Vendas</span>
+    </button>
+
+    <!-- Botão Fiado -->
+    <button
+      (click)="navegarPara('fiado')"
+      [class.active]="paginaAtual === 'fiado'"
+      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
+      [ngClass]="paginaAtual === 'fiado' 
+        ? 'bg-green-600 text-white' 
+        : 'bg-green-50 text-green-700 hover:bg-green-100'">
+      <span class="text-sm font-medium">Fiado</span>
+    </button>
+
+    <!-- Botão Histórico -->
+    <button
+      (click)="navegarPara('historico')"
+      [class.active]="paginaAtual === 'historico'"
+      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
+      [ngClass]="paginaAtual === 'historico' 
+        ? 'bg-green-600 text-white' 
+        : 'bg-green-50 text-green-700 hover:bg-green-100'">
+      <span class="text-sm font-medium">Histórico</span>
+    </button>
+
+    <!-- Botão Fechamento -->
+    <button
+      (click)="navegarPara('fechamento')"
+      [class.active]="paginaAtual === 'fechamento'"
+      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
+      [ngClass]="paginaAtual === 'fechamento' 
+        ? 'bg-green-600 text-white' 
+        : 'bg-green-50 text-green-700 hover:bg-green-100'">
+      <span class="text-sm font-medium">Fechamento</span>
+    </button>
+
+    <!-- Botão Gerenciamento -->
+    <button
+      (click)="navegarPara('gerenciamento')"
+      [class.active]="paginaAtual === 'gerenciamento'"
+      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
+      [ngClass]="paginaAtual === 'gerenciamento' 
+        ? 'bg-green-600 text-white' 
+        : 'bg-green-50 text-green-700 hover:bg-green-100'">
+      <span class="text-sm font-medium">Gerenciamento</span>
+    </button>
+  </div>
+
+  <!-- Container Botão Novo Produto e Logout -->
+  <div class="flex items-center gap-3">
+    <!-- Botão Novo Produto -->
+    <button
+      (click)="navegarPara('novo-produto')"
+      class="flex items-center px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-all duration-200 ease-in-out active:translate-y-1">
+      <span class="text-sm font-medium">+ Novo Produto</span>
+    </button>
+
+
+  </div>
+</div>
