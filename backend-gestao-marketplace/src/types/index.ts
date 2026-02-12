@@ -126,6 +126,7 @@ export interface CreateRelatorioDTO {
   produtosMaisVendidos: ResumoProduto[];
 }
 
+
 // --- GERAL ---
 export interface ApiResponse<T> {
   success: boolean;
