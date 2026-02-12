@@ -4,6 +4,10 @@
 
   <!-- Conteúdo Principal -->
   <div class="flex-1 overflow-auto">
+
+    <!-- Página de Produtos -->
+    <app-products *ngIf="paginaAtual === 'produtos'"></app-products>
+
     <!-- Página de Vendas -->
     <app-vendas *ngIf="paginaAtual === 'vendas'"></app-vendas>
 

@@ -1,4 +1,4 @@
-// Tipos para Produtos
+// --- PRODUTOS ---
 export interface Produto {
   id: string;
   nome: string;
@@ -9,7 +9,7 @@ export interface Produto {
   imagem?: string;
   ativo: boolean;
   dataCriacao: Date;
-  dataAtualizacao: Date;
+  dataAtualizacao?: Date;
 }
 
 export interface CreateProdutoDTO {
@@ -31,7 +31,7 @@ export interface UpdateProdutoDTO {
   ativo?: boolean;
 }
 
-// Tipos para Itens de Venda
+// --- VENDAS ---
 export interface ItemVenda {
   id: string;
   vendaId: string;
@@ -42,34 +42,35 @@ export interface ItemVenda {
   subtotal: number;
 }
 
-export interface CreateItemVendaDTO {
-  produtoId: string;
-  nomeProduto: string;
-  quantidade: number;
-  valorUnitario: number;
-  subtotal: number;
-}
-
-// Tipos para Vendas
 export interface Venda {
   id: string;
   itens: ItemVenda[];
   total: number;
-  formaPagamento: 'dinheiro' | 'cartao' | 'pix' | 'fiado';
+  formaPagamento: string;
   dataVenda: Date;
   status: 'concluida' | 'cancelada' | 'fiado';
   nomeCliente?: string;
 }
 
 export interface CreateVendaDTO {
-  itens: CreateItemVendaDTO[];
+  itens: {
+    produtoId: string;
+    nomeProduto: string;
+    quantidade: number;
+    valorUnitario: number;
+    subtotal: number;
+  }[];
   total: number;
-  formaPagamento: 'dinheiro' | 'cartao' | 'pix' | 'fiado';
-  status?: 'concluida' | 'cancelada' | 'fiado';
+  formaPagamento: string;
+  status?: string;
   nomeCliente?: string;
 }
 
-// Tipos para Vendas Fiado
+export interface CreateVendaWithStatusDTO extends CreateVendaDTO {
+  status: 'concluida' | 'cancelada' | 'fiado';
+}
+
+// --- FIADOS ---
 export interface VendaFiado {
   id: string;
   nomeBuyer: string;
@@ -79,66 +80,56 @@ export interface VendaFiado {
   status: 'aberto' | 'fechado';
 }
 
-export interface CreateVendaWithStatusDTO extends CreateVendaDTO {
-  status: 'concluida' | 'cancelada' | 'fiado';
-  nomeCliente?: string;  // ← Adicionado
-}
-
-export interface CreateVendaWithStatusDTO extends CreateVendaDTO {
-  status: 'concluida' | 'cancelada' | 'fiado';  // ← Obrigatório
-}
-
 export interface CreateVendaFiadoDTO {
   nomeBuyer: string;
-  itens: CreateItemVendaDTO[];
+  itens: any[];
   total: number;
 }
 
 export interface UpdateVendaFiadoDTO {
-  itens?: CreateItemVendaDTO[];
+  nomeBuyer?: string;
   total?: number;
+  status?: 'aberto' | 'fechado';
 }
 
-// Tipos para Relatórios
-export interface ResumoProduto {
+export interface CreateItemVendaDTO {
   produtoId: string;
   nomeProduto: string;
-  quantidadeVendida: number;
-  valorTotalVenda: number;
-  lucro: number;
+  quantidade: number;
+  valorUnitario: number;
+  subtotal: number;
+}
+
+// --- RELATÓRIOS ---
+export interface ResumoProduto {
+  produtoId: string;
+  nome: string;
+  quantidade: number;
+  totalVendido: number;
 }
 
 export interface Relatorio {
   id: string;
-  dataCaixa: Date;
-  vendas: Venda[];
+  dataRelatorio: Date;
   totalVendas: number;
-  lucroTotal: number;
-  resumoProdutos: ResumoProduto[];
+  quantidadeVendas: number;
+  metodoPagamentoMaisUsado: string;
+  produtosMaisVendidos: ResumoProduto[];
   dataCriacao: Date;
 }
 
 export interface CreateRelatorioDTO {
-  dataCaixa: Date;
-  vendas: Venda[];
+  dataRelatorio: Date;
   totalVendas: number;
-  lucroTotal: number;
-  resumoProdutos: ResumoProduto[];
+  quantidadeVendas: number;
+  metodoPagamentoMaisUsado: string;
+  produtosMaisVendidos: ResumoProduto[];
 }
 
-// Tipos para Respostas
+// --- GERAL ---
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
   message?: string;
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
 }

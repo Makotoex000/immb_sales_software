@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getPool } from '../config/database';
 import { VendaFiado, CreateVendaFiadoDTO, UpdateVendaFiadoDTO, ItemVenda, CreateItemVendaDTO } from '../types';
+import { produtoService } from './produto.service';
 import sql from 'mssql';
 
 class FiadoServiceClass {
@@ -46,6 +47,11 @@ class FiadoServiceClass {
         valorUnitario: item.valorUnitario,
         subtotal: item.subtotal,
       });
+    }
+
+    // ✅ Decrementar estoque ao criar fiado
+    for (const item of dto.itens) {
+      await produtoService.decrementarEstoque(item.produtoId, item.quantidade);
     }
 
     return {
@@ -161,6 +167,9 @@ class FiadoServiceClass {
         `);
 
       novoTotal += item.subtotal;
+      
+      // ✅ Decrementar estoque ao adicionar itens ao fiado
+      await produtoService.decrementarEstoque(item.produtoId, item.quantidade);
     }
 
     await pool
@@ -223,9 +232,10 @@ class FiadoServiceClass {
         SELECT * FROM ItensFiado WHERE vendaFiadoId = @vendaFiadoId
       `);
 
+    // ✅ Correção do mapeamento para evitar erro de tipo
     return result.recordset.map((row: any) => ({
       id: row.id,
-      vendaId: row.vendaFiadoId,
+      vendaId: row.vendaFiadoId, // Mapeia vendaFiadoId do banco para vendaId da interface
       produtoId: row.produtoId,
       nomeProduto: row.nomeProduto,
       quantidade: row.quantidade,

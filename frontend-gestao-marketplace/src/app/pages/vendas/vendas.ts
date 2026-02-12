@@ -1,205 +1,188 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../services/api.service';
-
-interface Produto {
-  id: string;
-  nome: string;
-  valorCompra: number;
-  valorVenda: number;
-  quantidade: number;
-  descricao?: string;
-  imagem?: string;
-  ativo: boolean;
-}
-
-interface ItemVenda {
-  produtoId: string;
-  nomeProduto: string;
-  quantidade: number;
-  valorUnitario: number;
-  subtotal: number;
-}
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-vendas',
+  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './vendas.html',
   styleUrl: './vendas.css'
-})
+} )
 export class Vendas implements OnInit {
-  produtos: Produto[] = [];
-  carrinho: ItemVenda[] = [];
-  busca: string = '';
-  formaPagamento: 'dinheiro' | 'cartao' | 'pix' | 'fiado' = 'dinheiro';
-  nomeCompradorFiado: string = '';
-  quantidadesProdutos: { [key: string]: number } = {};
-  mensagemSucesso: string = '';
-  mensagemErro: string = '';
-  carregando: boolean = false;
+  // Variáveis de estado da tela
+  produtos: any[] = [];
+  produtosFiltrados: any[] = [];
+  carrinho: any[] = [];
+  filtro: string = '';
+  total: number = 0;
+  formaPagamento: string = 'dinheiro';
+  nomeCliente: string = '';
+  
+  // URLs da API (Usando IP para evitar erro de resolução de nome)
+  private readonly baseUrl = 'http://127.0.0.1:3000/api';
+  apiUrl = `${this.baseUrl}/produtos/ativos`;
+  vendasUrl = `${this.baseUrl}/vendas`;
+  fiadosUrl = `${this.baseUrl}/fiados`;
 
-  constructor(private apiService: ApiService) {}
+  private http = inject(HttpClient );
 
-  ngOnInit(): void {
+  ngOnInit() {
     this.carregarProdutos();
   }
 
-  carregarProdutos(): void {
-    this.carregando = true;
-    this.apiService.obterProdutosAtivos().subscribe(
-      (response: any) => {
-        this.carregando = false;
-        if (response.success) {
-          this.produtos = response.data || [];
-        } else {
-          this.mensagemErro = 'Erro ao carregar produtos';
-        }
+  // Busca produtos ativos no backend
+  carregarProdutos() {
+    console.log('Buscando produtos em:', this.apiUrl);
+    this.http.get<any>(this.apiUrl ).subscribe({
+      next: (res) => {
+        console.log('Resposta recebida:', res);
+        const dados = res.data || res;
+        this.produtos = Array.isArray(dados) ? dados : [];
+        this.produtosFiltrados = [...this.produtos];
       },
-      (error: any) => {
-        this.carregando = false;
-        console.error('Erro ao carregar produtos:', error);
-        this.mensagemErro = 'Erro ao carregar produtos';
+      error: (err) => {
+        console.error('Erro ao carregar produtos:', err);
       }
+    });
+  }
+
+  // Filtra a lista de produtos conforme o usuário digita
+  filtrarProdutos() {
+    const termo = this.filtro.toLowerCase().trim();
+    if (!termo) {
+      this.produtosFiltrados = [...this.produtos];
+      return;
+    }
+    this.produtosFiltrados = this.produtos.filter(p => 
+      p.nome.toLowerCase().includes(termo)
     );
   }
 
-  get produtosFiltrados(): Produto[] {
-    if (!this.busca.trim()) {
-      return this.produtos;
-    }
-    return this.produtos.filter(p =>
-      p.nome.toLowerCase().includes(this.busca.toLowerCase())
-    );
-  }
-
-  get totalCarrinho(): number {
-    return this.carrinho.reduce((sum, item) => sum + item.subtotal, 0);
-  }
-
-  adicionarAoCarrinho(produto: Produto): void {
-    // Verificar se o produto está sem estoque
-    if (produto.quantidade === 0) {
-      this.mensagemErro = 'Este produto está sem estoque';
+  // Adiciona um item ao carrinho de compras
+  adicionarAoCarrinho(produto: any) {
+    if (produto.quantidade <= 0) {
+      alert('Produto sem estoque disponível!');
       return;
     }
 
-    const quantidade = this.quantidadesProdutos[produto.id];
+    const itemNoCarrinho = this.carrinho.find(item => item.produtoId === produto.id);
 
-    if (!quantidade || quantidade <= 0) {
-      this.mensagemErro = 'Quantidade inválida';
-      return;
-    }
-
-    if (quantidade > produto.quantidade) {
-      this.mensagemErro = 'Quantidade maior que o estoque disponível';
-      return;
-    }
-
-    // Verificar se o produto já está no carrinho
-    const itemExistente = this.carrinho.find(item => item.produtoId === produto.id);
-
-    if (itemExistente) {
-      itemExistente.quantidade += quantidade;
-      itemExistente.subtotal = itemExistente.quantidade * itemExistente.valorUnitario;
+    if (itemNoCarrinho) {
+      if (itemNoCarrinho.quantidade < produto.quantidade) {
+        itemNoCarrinho.quantidade++;
+        itemNoCarrinho.subtotal = itemNoCarrinho.quantidade * itemNoCarrinho.valorUnitario;
+      } else {
+        alert('Limite de estoque atingido para este item no carrinho.');
+      }
     } else {
       this.carrinho.push({
         produtoId: produto.id,
         nomeProduto: produto.nome,
-        quantidade,
+        quantidade: 1,
         valorUnitario: produto.valorVenda,
-        subtotal: quantidade * produto.valorVenda
+        subtotal: produto.valorVenda
       });
     }
-
-    // Atualizar a quantidade do produto no array (apenas para exibição)
-    const produtoIndex = this.produtos.findIndex(p => p.id === produto.id);
-    if (produtoIndex !== -1) {
-      this.produtos[produtoIndex].quantidade -= quantidade;
-    }
-
-    this.quantidadesProdutos[produto.id] = 0;
-    this.mensagemErro = '';
-    this.mensagemSucesso = `${produto.nome} adicionado ao carrinho`;
-    setTimeout(() => this.mensagemSucesso = '', 3000);
+    this.calcularTotal();
   }
 
-  removerDoCarrinho(index: number): void {
+  // Remove um item específico do carrinho
+  removerDoCarrinho(index: number) {
     this.carrinho.splice(index, 1);
+    this.calcularTotal();
   }
 
-  finalizarVenda(): void {
+  // Atualiza a quantidade de um item no carrinho com validação de estoque
+  atualizarQuantidade(index: number, novaQtd: number) {
+    const item = this.carrinho[index];
+    const produtoOriginal = this.produtos.find(p => p.id === item.produtoId);
+
+    if (novaQtd <= 0) {
+      this.removerDoCarrinho(index);
+      return;
+    }
+
+    if (produtoOriginal && novaQtd <= produtoOriginal.quantidade) {
+      item.quantidade = novaQtd;
+      item.subtotal = item.quantidade * item.valorUnitario;
+      this.calcularTotal();
+    } else {
+      alert('Quantidade solicitada excede o estoque disponível.');
+    }
+  }
+
+  // Calcula o valor total da venda
+  calcularTotal() {
+    this.total = this.carrinho.reduce((acc, item) => acc + item.subtotal, 0);
+  }
+
+  // Finaliza a venda (Normal ou Fiado)
+  finalizarVenda() {
     if (this.carrinho.length === 0) {
-      this.mensagemErro = 'Carrinho vazio';
+      alert('Adicione pelo menos um produto ao carrinho.');
       return;
     }
-
-    if (this.formaPagamento === 'fiado' && !this.nomeCompradorFiado.trim()) {
-      this.mensagemErro = 'Nome do comprador é obrigatório para fiado';
-      return;
-    }
-
-    this.carregando = true;
 
     if (this.formaPagamento === 'fiado') {
-      // Criar fiado
-      const fiado = {
-        nomeBuyer: this.nomeCompradorFiado,
-        itens: this.carrinho,
-        total: this.totalCarrinho
-      };
-
-      this.apiService.criarFiado(fiado).subscribe(
-        (response: any) => {
-          this.carregando = false;
-          if (response.success) {
-            this.mensagemSucesso = 'Fiado criado com sucesso!';
-            this.limparCarrinho();
-          } else {
-            this.mensagemErro = response.error || 'Erro ao criar fiado';
-          }
-        },
-        (error: any) => {
-          this.carregando = false;
-          console.error('Erro ao criar fiado:', error);
-          this.mensagemErro = 'Erro ao criar fiado';
-        }
-      );
-    } else {
-      // Criar venda normal
-      const venda = {
-        itens: this.carrinho,
-        total: this.totalCarrinho,
-        formaPagamento: this.formaPagamento
-      };
-
-      this.apiService.criarVenda(venda).subscribe(
-        (response: any) => {
-          this.carregando = false;
-          if (response.success) {
-            this.mensagemSucesso = 'Venda finalizada com sucesso!';
-            this.limparCarrinho();
-            this.carregarProdutos();
-          } else {
-            this.mensagemErro = response.error || 'Erro ao finalizar venda';
-          }
-        },
-        (error: any) => {
-          this.carregando = false;
-          console.error('Erro ao finalizar venda:', error);
-          this.mensagemErro = 'Erro ao finalizar venda';
-        }
-      );
+      this.finalizarFiado();
+      return;
     }
+
+    const venda = {
+      itens: this.carrinho,
+      total: this.total,
+      formaPagamento: this.formaPagamento,
+      nomeCliente: this.nomeCliente
+    };
+
+    this.http.post(this.vendasUrl, venda ).subscribe({
+      next: () => {
+        alert('Venda finalizada com sucesso!');
+        this.limparVenda();
+        this.carregarProdutos();
+      },
+      error: (err) => {
+        console.error('Erro na venda:', err);
+        alert('Erro ao processar venda. Verifique a conexão.');
+      }
+    });
   }
 
-  private limparCarrinho(): void {
-    setTimeout(() => {
-      this.carrinho = [];
-      this.nomeCompradorFiado = '';
-      this.formaPagamento = 'dinheiro';
-      this.mensagemSucesso = '';
-      this.carregarProdutos();
-    }, 2000);
+  // Lógica específica para registrar venda fiado
+  finalizarFiado() {
+    if (!this.nomeCliente || this.nomeCliente.trim() === '') {
+      alert('Para vendas fiado, o nome do cliente é obrigatório.');
+      return;
+    }
+
+    const fiado = {
+      nomeBuyer: this.nomeCliente,
+      itens: this.carrinho,
+      total: this.total
+    };
+
+    this.http.post(this.fiadosUrl, fiado ).subscribe({
+      next: () => {
+        alert('Venda fiado registrada com sucesso!');
+        this.limparVenda();
+        this.carregarProdutos();
+      },
+      error: (err) => {
+        console.error('Erro no fiado:', err);
+        alert('Erro ao registrar fiado.');
+      }
+    });
+  }
+
+  // Reseta os campos da tela após uma operação
+  limparVenda() {
+    this.carrinho = [];
+    this.total = 0;
+    this.nomeCliente = '';
+    this.formaPagamento = 'dinheiro';
+    this.filtro = '';
+    this.produtosFiltrados = [...this.produtos];
   }
 }

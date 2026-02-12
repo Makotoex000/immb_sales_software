@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getPool } from '../config/database';
 import { Produto, CreateProdutoDTO, UpdateProdutoDTO } from '../types';
-
 import sql from 'mssql';
 
 class ProdutoServiceClass {
@@ -10,7 +9,7 @@ class ProdutoServiceClass {
     const id = uuidv4();
     const agora = new Date();
 
-    const result = await pool
+    await pool
       .request()
       .input('id', sql.NVarChar(50), id)
       .input('nome', sql.NVarChar(255), dto.nome)
@@ -42,11 +41,7 @@ class ProdutoServiceClass {
 
   async obterTodosProdutos(): Promise<Produto[]> {
     const pool = getPool();
-
-    const result = await pool.request().query(`
-      SELECT * FROM Produtos ORDER BY dataCriacao DESC
-    `);
-
+    const result = await pool.request().query(`SELECT * FROM Produtos ORDER BY dataCriacao DESC`);
     return result.recordset.map((row: any) => ({
       id: row.id,
       nome: row.nome,
@@ -63,11 +58,7 @@ class ProdutoServiceClass {
 
   async obterProdutosAtivos(): Promise<Produto[]> {
     const pool = getPool();
-
-    const result = await pool.request().query(`
-      SELECT * FROM Produtos WHERE ativo = 1 ORDER BY dataCriacao DESC
-    `);
-
+    const result = await pool.request().query(`SELECT * FROM Produtos`);
     return result.recordset.map((row: any) => ({
       id: row.id,
       nome: row.nome,
@@ -84,20 +75,9 @@ class ProdutoServiceClass {
 
   async obterProdutoPorId(id: string): Promise<Produto | null> {
     const pool = getPool();
-
-    const result = await pool
-      .request()
-      .input('id', sql.NVarChar(50), id)
-      .query(`
-        SELECT * FROM Produtos WHERE id = @id
-      `);
-
-    if (result.recordset.length === 0) {
-      return null;
-    }
-
+    const result = await pool.request().input('id', sql.NVarChar(50), id).query(`SELECT * FROM Produtos WHERE id = @id`);
+    if (result.recordset.length === 0) return null;
     const row = result.recordset[0];
-
     return {
       id: row.id,
       nome: row.nome,
@@ -114,14 +94,10 @@ class ProdutoServiceClass {
 
   async atualizarProduto(id: string, dto: UpdateProdutoDTO): Promise<Produto | null> {
     const pool = getPool();
-
     const produto = await this.obterProdutoPorId(id);
-    if (!produto) {
-      return null;
-    }
+    if (!produto) return null;
 
-    await pool
-      .request()
+    await pool.request()
       .input('id', sql.NVarChar(50), id)
       .input('nome', sql.NVarChar(255), dto.nome || produto.nome)
       .input('valorCompra', sql.Decimal(10, 2), dto.valorCompra !== undefined ? dto.valorCompra : produto.valorCompra)
@@ -130,83 +106,51 @@ class ProdutoServiceClass {
       .input('descricao', sql.NVarChar(sql.MAX), dto.descricao || produto.descricao)
       .input('imagem', sql.NVarChar(sql.MAX), dto.imagem || produto.imagem)
       .input('ativo', sql.Bit, dto.ativo !== undefined ? (dto.ativo ? 1 : 0) : (produto.ativo ? 1 : 0))
-      .query(`
-        UPDATE Produtos SET nome = @nome, valorCompra = @valorCompra, valorVenda = @valorVenda, quantidade = @quantidade, descricao = @descricao, imagem = @imagem, ativo = @ativo WHERE id = @id
-      `);
+      .query(`UPDATE Produtos SET nome = @nome, valorCompra = @valorCompra, valorVenda = @valorVenda, quantidade = @quantidade, descricao = @descricao, imagem = @imagem, ativo = @ativo WHERE id = @id`);
 
     return await this.obterProdutoPorId(id);
   }
 
+  // ✅ ESTES SÃO OS MÉTODOS QUE ESTAVAM FALTANDO
   async desativarProduto(id: string): Promise<boolean> {
     const pool = getPool();
-
-    const result = await pool
-      .request()
+    const result = await pool.request()
       .input('id', sql.NVarChar(50), id)
-      .query(`
-        UPDATE Produtos SET ativo = 0 WHERE id = @id
-      `);
-
+      .query(`UPDATE Produtos SET ativo = 0 WHERE id = @id`);
     return result.rowsAffected[0] > 0;
   }
 
   async ativarProduto(id: string): Promise<boolean> {
     const pool = getPool();
-
-    const result = await pool
-      .request()
+    const result = await pool.request()
       .input('id', sql.NVarChar(50), id)
-      .query(`
-        UPDATE Produtos SET ativo = 1 WHERE id = @id
-      `);
-
+      .query(`UPDATE Produtos SET ativo = 1 WHERE id = @id`);
     return result.rowsAffected[0] > 0;
   }
 
   async deletarProduto(id: string): Promise<boolean> {
     const pool = getPool();
-
-    const result = await pool
-      .request()
+    const result = await pool.request()
       .input('id', sql.NVarChar(50), id)
-      .query(`
-        DELETE FROM Produtos WHERE id = @id
-      `);
-
+      .query(`DELETE FROM Produtos WHERE id = @id`);
     return result.rowsAffected[0] > 0;
   }
 
   async decrementarEstoque(produtoId: string, quantidade: number): Promise<void> {
-  const pool = getPool();
-  
-  await pool
-    .request()
-    .input('produtoId', sql.NVarChar(50), produtoId)
-    .input('quantidade', sql.Int, quantidade)
-    .query(`
-      UPDATE Produtos 
-      SET quantidade = quantidade - @quantidade
-      WHERE id = @produtoId AND quantidade >= @quantidade
-    `);
-}
+    const pool = getPool();
+    await pool.request()
+      .input('produtoId', sql.NVarChar(50), produtoId)
+      .input('quantidade', sql.Int, quantidade)
+      .query(`UPDATE Produtos SET quantidade = quantidade - @quantidade WHERE id = @produtoId AND quantidade >= @quantidade`);
+  }
 
-async incrementarEstoque(produtoId: string, quantidade: number): Promise<void> {
-  const pool = getPool();
-  
-  await pool
-    .request()
-    .input('produtoId', sql.NVarChar(50), produtoId)
-    .input('quantidade', sql.Int, quantidade)
-    .query(`
-      UPDATE Produtos 
-      SET quantidade = quantidade + @quantidade
-      WHERE id = @produtoId
-    `);
-
-}
-
-
+  async incrementarEstoque(produtoId: string, quantidade: number): Promise<void> {
+    const pool = getPool();
+    await pool.request()
+      .input('produtoId', sql.NVarChar(50), produtoId)
+      .input('quantidade', sql.Int, quantidade)
+      .query(`UPDATE Produtos SET quantidade = quantidade + @quantidade WHERE id = @produtoId`);
+  }
 }
 
 export const produtoService = new ProdutoServiceClass();
-

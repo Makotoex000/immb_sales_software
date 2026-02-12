@@ -1,137 +1,104 @@
-<div class="w-full p-8 bg-gray-50 min-h-screen">
-  <div class="grid grid-cols-3 gap-8">
-    <!-- Coluna Esquerda - Lista de Produtos -->
-    <div class="col-span-2">
-      <div class="bg-white rounded-lg shadow-lg p-6">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Produtos Disponíveis</h2>
-
-        <!-- Barra de Busca -->
-        <div class="mb-6">
-          <input
-            [(ngModel)]="busca"
-            type="text"
-            placeholder="Buscar produto..."
-            class="w-full px-4 py-3 border-2 border-green-200 rounded-lg focus:border-green-600 focus:outline-none" />
-        </div>
-
-        <!-- Grid de Produtos -->
-        <div class="grid grid-cols-1 gap-4 max-h-96 overflow-y-auto">
-          <div
-            *ngFor="let produto of produtosFiltrados"
-            class="relative flex items-center justify-between p-4 border-2 rounded-lg transition-colors"
-            [ngClass]="produto.quantidade === 0 ? 'border-red-200 bg-red-50' : produto.quantidade <= 5 ? 'border-yellow-200 bg-yellow-50' : 'border-green-100 hover:border-green-400'">
-            <div class="flex-1">
-              <h3 class="font-semibold text-gray-800">{{ produto.nome }}</h3>
-              <p class="text-sm" [ngClass]="produto.quantidade === 0 ? 'text-red-600' : produto.quantidade <= 5 ? 'text-yellow-600' : 'text-gray-600'">
-                Estoque: <span class="font-semibold">{{ produto.quantidade }}</span>
-              </p>
-              <p class="text-green-600 font-semibold">R$ {{ produto.valorVenda.toFixed(2) }}</p>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <input
-                [(ngModel)]="quantidadesProdutos[produto.id]"
-                type="number"
-                min="1"
-                [max]="produto.quantidade"
-                placeholder="0"
-                [disabled]="produto.quantidade === 0"
-                class="w-16 px-2 py-2 border border-green-200 rounded text-center disabled:bg-gray-100" />
-              <button
-                (click)="adicionarAoCarrinho(produto)"
-                [disabled]="!quantidadesProdutos[produto.id] || quantidadesProdutos[produto.id] <= 0 || produto.quantidade === 0"
-                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                {{ produto.quantidade === 0 ? 'Sem Estoque' : 'Adicionar' }}
-              </button>
-            </div>
-
-            <!-- Alerta de Estoque Baixo -->
-            <div *ngIf="produto.quantidade > 0 && produto.quantidade <= 5" class="absolute top-2 right-2 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 rounded text-xs font-semibold">
-              ⚠️ Estoque Acabando
-            </div>
-            <div *ngIf="produto.quantidade === 0" class="absolute top-2 right-2 bg-red-100 border-l-4 border-red-500 text-red-700 p-2 rounded text-xs font-semibold">
-              ❌ Sem Estoque
-            </div>
-          </div>
-
-          <div *ngIf="produtosFiltrados.length === 0" class="text-center py-8 text-gray-500">
-            Nenhum produto disponível
-          </div>
-        </div>
+<div class="flex h-full bg-gray-50">
+  <!-- Lado Esquerdo: Lista de Produtos -->
+  <div class="flex-1 flex flex-col p-6 overflow-hidden">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">🛒 Nova Venda</h2>
+      <div class="relative">
+        <input 
+          type="text" 
+          [(ngModel)]="filtro" 
+          (input)="filtrarProdutos()"
+          placeholder="Buscar produto por nome..." 
+          class="w-full pl-10 pr-4 py-3 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-green-500 outline-none"
+        >
+        <span class="absolute left-3 top-3.5 text-gray-400">🔍</span>
       </div>
     </div>
 
-    <!-- Coluna Direita - Carrinho -->
-    <div class="col-span-1">
-      <div class="bg-white rounded-lg shadow-lg p-6 sticky top-8">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Carrinho</h2>
-
-        <!-- Itens do Carrinho -->
-        <div class="space-y-4 max-h-64 overflow-y-auto mb-6">
-          <div *ngFor="let item of carrinho; let i = index" class="flex justify-between items-start p-3 bg-green-50 rounded-lg">
-            <div class="flex-1">
-              <p class="font-semibold text-gray-800">{{ item.nomeProduto }}</p>
-              <p class="text-sm text-gray-600">Qtd: {{ item.quantidade }}</p>
-              <p class="text-green-600 font-semibold">R$ {{ item.subtotal.toFixed(2) }}</p>
+    <div class="flex-1 overflow-auto pr-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        @for (p of produtosFiltrados; track p.id) {
+          <div 
+            (mousedown)="adicionarAoCarrinho(p)"
+            class="bg-white p-4 rounded-2xl shadow-sm border border-transparent hover:border-green-500 hover:shadow-md transition-all cursor-pointer group"
+          >
+            <div class="h-32 bg-gray-100 rounded-xl mb-3 overflow-hidden">
+              <img [src]="p.imagem || 'https://via.placeholder.com/200x150?text=Sem+Imagem'" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
             </div>
-            <button
-              (click)="removerDoCarrinho(i)"
-              class="text-red-600 hover:text-red-800 font-semibold">
-              ✕
-            </button>
+            <h3 class="font-bold text-gray-800 truncate">{{p.nome}}</h3>
+            <div class="flex justify-between items-center mt-2">
+              <span class="text-green-600 font-bold">R$ {{p.valorVenda | number:'1.2-2'}}</span>
+              <span class="text-xs font-bold px-2 py-1 rounded-lg" [ngClass]="p.quantidade <= 5 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'">
+                Estoque: {{p.quantidade}}
+              </span>
+            </div>
           </div>
+        } @empty {
+          <div class="col-span-full py-10 text-center text-gray-400">Nenhum produto encontrado.</div>
+        }
+      </div>
+    </div>
+  </div>
 
-          <div *ngIf="carrinho.length === 0" class="text-center py-8 text-gray-500">
-            Carrinho vazio
+  <!-- Lado Direito: Carrinho -->
+  <div class="w-96 bg-white border-l border-gray-100 flex flex-col shadow-xl">
+    <div class="p-6 border-b border-gray-50">
+      <h3 class="text-xl font-bold text-gray-800">Carrinho</h3>
+    </div>
+
+    <div class="flex-1 overflow-auto p-4 space-y-3">
+      @for (item of carrinho; track item.produtoId; let i = $index ) {
+        <div class="bg-gray-50 p-3 rounded-xl flex flex-col gap-2">
+          <div class="flex justify-between items-start">
+            <span class="font-bold text-gray-800 text-sm flex-1">{{item.nomeProduto}}</span>
+            <button (mousedown)="removerDoCarrinho(i)" class="text-red-400 hover:text-red-600 ml-2">✕</button>
+          </div>
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2 bg-white rounded-lg border border-gray-200 p-1">
+              <button (mousedown)="atualizarQuantidade(i, item.quantidade - 1)" class="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded">-</button>
+              <span class="text-sm font-bold w-6 text-center">{{item.quantidade}}</span>
+              <button (mousedown)="atualizarQuantidade(i, item.quantidade + 1)" class="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded">+</button>
+            </div>
+            <span class="font-bold text-gray-700 text-sm">R$ {{item.subtotal | number:'1.2-2'}}</span>
           </div>
         </div>
-
-        <!-- Total -->
-        <div class="border-t-2 border-green-200 pt-4 mb-6">
-          <div class="flex justify-between mb-4">
-            <span class="font-semibold text-gray-700">Total:</span>
-            <span class="text-2xl font-bold text-green-600">R$ {{ totalCarrinho.toFixed(2) }}</span>
-          </div>
+      } @empty {
+        <div class="h-full flex flex-col items-center justify-center text-gray-300 gap-2">
+          <span class="text-4xl">🛒</span>
+          <p class="text-sm font-medium">Carrinho vazio</p>
         </div>
+      }
+    </div>
 
-        <!-- Forma de Pagamento -->
-        <div class="mb-6">
-          <label class="block text-sm font-semibold text-gray-700 mb-3">Forma de Pagamento</label>
-          <select
-            [(ngModel)]="formaPagamento"
-            class="w-full px-4 py-2 border-2 border-green-200 rounded-lg focus:border-green-600 focus:outline-none">
-            <option value="dinheiro">Dinheiro</option>
-            <option value="cartao">Cartão</option>
-            <option value="pix">PIX</option>
-            <option value="fiado">Fiado</option>
-          </select>
+    <div class="p-6 bg-gray-50 border-t border-gray-100 space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Cliente / Identificação</label>
+        <input type="text" [(ngModel)]="nomeCliente" placeholder="Opcional (Obrigatório para Fiado)" class="w-full p-3 rounded-xl border-none shadow-sm outline-none focus:ring-2 focus:ring-green-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Forma de Pagamento</label>
+        <select [(ngModel)]="formaPagamento" class="w-full p-3 rounded-xl border-none shadow-sm outline-none focus:ring-2 focus:ring-green-500 bg-white">
+          <option value="dinheiro">💵 Dinheiro</option>
+          <option value="pix">💎 PIX</option>
+          <option value="cartao_debito">💳 Cartão de Débito</option>
+          <option value="cartao_credito">💳 Cartão de Crédito</option>
+          <option value="fiado">📝 Fiado</option>
+        </select>
+      </div>
+
+      <div class="pt-4 border-t border-gray-200">
+        <div class="flex justify-between items-center mb-4">
+          <span class="text-gray-500 font-bold">Total</span>
+          <span class="text-3xl font-black text-green-600">R$ {{total | number:'1.2-2'}}</span>
         </div>
-
-        <!-- Campo Nome Comprador (Fiado) -->
-        <div *ngIf="formaPagamento === 'fiado'" class="mb-6">
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Nome do Comprador</label>
-          <input
-            [(ngModel)]="nomeCompradorFiado"
-            type="text"
-            placeholder="Nome do cliente"
-            class="w-full px-4 py-2 border-2 border-green-200 rounded-lg focus:border-green-600 focus:outline-none" />
-        </div>
-
-        <!-- Botão Finalizar Venda -->
-        <button
-          (click)="finalizarVenda()"
-          [disabled]="carrinho.length === 0 || (formaPagamento === 'fiado' && !nomeCompradorFiado)"
-          class="w-full px-4 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+        <button 
+          (mousedown)="finalizarVenda()"
+          [disabled]="carrinho.length === 0"
+          class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white py-4 rounded-2xl font-bold shadow-lg shadow-green-200 transition-all active:scale-95"
+        >
           Finalizar Venda
         </button>
-
-        <!-- Mensagens -->
-        <div *ngIf="mensagemSucesso" class="mt-4 p-3 bg-green-100 border-l-4 border-green-600 text-green-700 rounded text-sm">
-          {{ mensagemSucesso }}
-        </div>
-        <div *ngIf="mensagemErro" class="mt-4 p-3 bg-red-100 border-l-4 border-red-600 text-red-700 rounded text-sm">
-          {{ mensagemErro }}
-        </div>
       </div>
     </div>
   </div>

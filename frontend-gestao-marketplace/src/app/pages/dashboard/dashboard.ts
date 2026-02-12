@@ -7,6 +7,7 @@ import { Fiado } from '../fiado/fiado';
 import { Historico } from '../historico/historico';
 import { Fechamento } from '../fechamento/fechamento';
 import { Gerenciamento } from '../gerenciamento/gerenciamento';
+import { Products } from '../products/products';
 
 @Component({
   selector: 'app-dashboard',
@@ -18,7 +19,8 @@ import { Gerenciamento } from '../gerenciamento/gerenciamento';
     Fiado,
     Historico,
     Fechamento,
-    Gerenciamento
+    Gerenciamento,
+    Products
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css'
