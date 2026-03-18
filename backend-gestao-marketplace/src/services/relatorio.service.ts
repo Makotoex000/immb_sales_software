@@ -1,140 +1,255 @@
-import { getPool } from '../config/database';
 import { v4 as uuidv4 } from 'uuid';
+import { getPool } from '../config/database';
+import { Relatorio, CreateRelatorioDTO, ResumoProduto } from '../types';
 import sql from 'mssql';
 
 class RelatorioServiceClass {
-         private mapearParaFrontend(row: any) {
-    if (!row) return null;
-    
-    // 1. Garante que a data seja válida (usa dataCriacao se dataCaixa estiver zerada)
-    const dataValida = row.dataCaixa && row.dataCaixa.toISOString().includes('00:00:00') 
-      ? row.dataCriacao 
-      : (row.dataCaixa || row.dataCriacao || new Date());
-
-    // 2. Garante que produtosMaisVendidos NUNCA seja null (isso trava o Excel e a Tabela)
-    let produtos = [];
-    try {
-      if (row.produtosMaisVendidos) {
-        produtos = typeof row.produtosMaisVendidos === 'string' 
-          ? JSON.parse(row.produtosMaisVendidos) 
-          : row.produtosMaisVendidos;
-      }
-    } catch (e) {
-      produtos = [];
-    }
-
-    // 3. Objeto final com mapeamento duplo (Banco <-> Frontend)
-    return {
-      ...row,
-      id: row.id,
-      // Campos de Data
-      dataRelatorio: dataValida,
-      dataCaixa: dataValida,
-      data: dataValida,
-      
-      // Campos de Valores (Garante que não sejam null para o Excel não quebrar)
-      totalVendas: row.totalVendas || 0,
-      total: row.totalVendas || 0,
-      lucroTotal: row.lucroTotal || 0,
-      lucro: row.lucroTotal || 0,
-      
-      // Campos de Resumo e Exportação
-      quantidadeVendas: row.quantidadeVendas || (Array.isArray(produtos) ? produtos.length : 0),
-      metodoPagamentoMaisUsado: row.metodoPagamentoMaisUsado || 'N/A',
-      produtosMaisVendidos: produtos,
-      resumoProdutos: produtos
-    };
-  }
-
-
-
-
-  async criarRelatorio(dto: any): Promise<any> {
+  async criarRelatorio(dto: CreateRelatorioDTO): Promise<Relatorio> {
     const pool = getPool();
     const id = uuidv4();
     const agora = new Date();
 
-    const dataCaixa = dto.dataRelatorio || dto.dataCaixa || agora;
-    const totalVendas = dto.totalVendas || 0;
-    const lucroTotal = dto.lucroTotal || 0;
-    const produtosJSON = JSON.stringify(dto.produtosMaisVendidos || dto.resumoProdutos || []);
-
-    await pool.request()
+    // Inserir relatório
+    await pool
+      .request()
       .input('id', sql.NVarChar(50), id)
-      .input('dataCaixa', sql.DateTime, dataCaixa)
-      .input('totalVendas', sql.Decimal(10, 2), totalVendas)
-      .input('lucroTotal', sql.Decimal(10, 2), lucroTotal)
-      .input('produtosMaisVendidos', sql.NVarChar(sql.MAX), produtosJSON)
+      .input('dataCaixa', sql.DateTime, dto.dataCaixa)
+      .input('totalVendas', sql.Int, dto.totalVendas)
+      .input('lucroTotal', sql.Decimal(10, 2), dto.lucroTotal)
       .input('dataCriacao', sql.DateTime, agora)
       .query(`
-        INSERT INTO Relatorios (id, dataCaixa, totalVendas, lucroTotal, produtosMaisVendidos, dataCriacao)
-        VALUES (@id, @dataCaixa, @totalVendas, @lucroTotal, @produtosMaisVendidos, @dataCriacao)
+        INSERT INTO Relatorios (id, dataCaixa, totalVendas, lucroTotal, dataCriacao)
+        VALUES (@id, @dataCaixa, @totalVendas, @lucroTotal, @dataCriacao)
       `);
 
-    return this.obterRelatorioPorId(id);
-  }
-
-    async obterRelatorios(): Promise<any[]> {
-    const pool = getPool();
-    const result = await pool.request().query(`SELECT * FROM Relatorios ORDER BY dataCaixa DESC`);
-    
-    // LOG PARA INVESTIGAÇÃO
-    console.log('--- DADOS BRUTOS DO BANCO (RELATORIOS) ---');
-    if (result.recordset.length > 0) {
-      console.log(JSON.stringify(result.recordset[0], null, 2));
-    } else {
-      console.log('Nenhum relatório encontrado no banco.');
+    // Inserir resumo de produtos
+    for (const resumo of dto.resumoProdutos) {
+      const resumoId = uuidv4();
+      await pool
+        .request()
+        .input('id', sql.NVarChar(50), resumoId)
+        .input('relatorioId', sql.NVarChar(50), id)
+        .input('produtoId', sql.NVarChar(50), resumo.produtoId)
+        .input('nomeProduto', sql.NVarChar(255), resumo.nomeProduto)
+        .input('quantidadeVendida', sql.Int, resumo.quantidadeVendida)
+        .input('valorTotalVenda', sql.Decimal(10, 2), resumo.valorTotalVenda)
+        .input('lucro', sql.Decimal(10, 2), resumo.lucro)
+        .query(`
+          INSERT INTO ResumoProdutosRelatorio (id, relatorioId, produtoId, nomeProduto, quantidadeVendida, valorTotalVenda, lucro)
+          VALUES (@id, @relatorioId, @produtoId, @nomeProduto, @quantidadeVendida, @valorTotalVenda, @lucro)
+        `);
     }
-    console.log('------------------------------------------');
 
-    return result.recordset.map(row => this.mapearParaFrontend(row));
+    return {
+      id,
+      dataCaixa: dto.dataCaixa,
+      vendas: dto.vendas,
+      totalVendas: dto.totalVendas,
+      lucroTotal: dto.lucroTotal,
+      resumoProdutos: dto.resumoProdutos,
+      dataCriacao: agora,
+    };
   }
 
-  async obterRelatorioPorId(id: string): Promise<any | null> {
+  async obterTodosRelatorios(): Promise<Relatorio[]> {
     const pool = getPool();
-    const result = await pool.request()
+
+    const result = await pool.request().query(`
+      SELECT * FROM Relatorios ORDER BY dataCaixa DESC
+    `);
+
+    const relatorios: Relatorio[] = [];
+    for (const row of result.recordset) {
+      const resumoProdutos = await this.obterResumoProdutos(row.id);
+      relatorios.push({
+        id: row.id,
+        dataCaixa: row.dataCaixa,
+        vendas: [],
+        totalVendas: row.totalVendas,
+        lucroTotal: row.lucroTotal,
+        resumoProdutos,
+        dataCriacao: row.dataCriacao,
+      });
+    }
+
+    return relatorios;
+  }
+
+  async obterRelatorioPorId(id: string): Promise<Relatorio | null> {
+    const pool = getPool();
+
+    const result = await pool
+      .request()
       .input('id', sql.NVarChar(50), id)
-      .query(`SELECT * FROM Relatorios WHERE id = @id`);
-    return this.mapearParaFrontend(result.recordset[0]);
+      .query(`
+        SELECT * FROM Relatorios WHERE id = @id
+      `);
+
+    if (result.recordset.length === 0) {
+      return null;
+    }
+
+    const row = result.recordset[0];
+    const resumoProdutos = await this.obterResumoProdutos(id);
+
+    return {
+      id: row.id,
+      dataCaixa: row.dataCaixa,
+      vendas: [],
+      totalVendas: row.totalVendas,
+      lucroTotal: row.lucroTotal,
+      resumoProdutos,
+      dataCriacao: row.dataCriacao,
+    };
   }
 
-  async obterRelatorioPorData(data: Date): Promise<any | null> {
+  async obterRelatorioPorData(data: Date): Promise<Relatorio[]> {
     const pool = getPool();
-    const inicioDia = new Date(data);
-    inicioDia.setHours(0, 0, 0, 0);
-    const fimDia = new Date(data);
-    fimDia.setHours(23, 59, 59, 999);
+    const dataInicio = new Date(data);
+    dataInicio.setHours(0, 0, 0, 0);
+    const dataFim = new Date(data);
+    dataFim.setHours(23, 59, 59, 999);
 
-    const result = await pool.request()
-      .input('inicio', sql.DateTime, inicioDia)
-      .input('fim', sql.DateTime, fimDia)
-      .query(`SELECT * FROM Relatorios WHERE dataCaixa BETWEEN @inicio AND @fim`);
+    const result = await pool
+      .request()
+      .input('dataInicio', sql.DateTime, dataInicio)
+      .input('dataFim', sql.DateTime, dataFim)
+      .query(`
+        SELECT * FROM Relatorios WHERE dataCaixa >= @dataInicio AND dataCaixa <= @dataFim ORDER BY dataCaixa DESC
+      `);
 
-    return this.mapearParaFrontend(result.recordset[0]);
+    const relatorios: Relatorio[] = [];
+    for (const row of result.recordset) {
+      const resumoProdutos = await this.obterResumoProdutos(row.id);
+      relatorios.push({
+        id: row.id,
+        dataCaixa: row.dataCaixa,
+        vendas: [],
+        totalVendas: row.totalVendas,
+        lucroTotal: row.lucroTotal,
+        resumoProdutos,
+        dataCriacao: row.dataCriacao,
+      });
+    }
+
+    return relatorios;
   }
 
-  async obterRelatorioPorPeriodo(inicio: Date, fim: Date): Promise<any[]> {
+  async obterRelatorioPorPeriodo(dataInicio: Date, dataFim: Date): Promise<Relatorio[]> {
     const pool = getPool();
-    const result = await pool.request()
-      .input('inicio', sql.DateTime, inicio)
-      .input('fim', sql.DateTime, fim)
-      .query(`SELECT * FROM Relatorios WHERE dataCaixa BETWEEN @inicio AND @fim ORDER BY dataCaixa DESC`);
+    const inicio = new Date(dataInicio);
+    inicio.setHours(0, 0, 0, 0);
+    const fim = new Date(dataFim);
+    fim.setHours(23, 59, 59, 999);
 
-    return result.recordset.map(row => this.mapearParaFrontend(row));
+    const result = await pool
+      .request()
+      .input('dataInicio', sql.DateTime, inicio)
+      .input('dataFim', sql.DateTime, fim)
+      .query(`
+        SELECT * FROM Relatorios WHERE dataCaixa >= @dataInicio AND dataCaixa <= @dataFim ORDER BY dataCaixa DESC
+      `);
+
+    const relatorios: Relatorio[] = [];
+    for (const row of result.recordset) {
+      const resumoProdutos = await this.obterResumoProdutos(row.id);
+      relatorios.push({
+        id: row.id,
+        dataCaixa: row.dataCaixa,
+        vendas: [],
+        totalVendas: row.totalVendas,
+        lucroTotal: row.lucroTotal,
+        resumoProdutos,
+        dataCriacao: row.dataCriacao,
+      });
+    }
+
+    return relatorios;
   }
 
-  async deletarRelatorios(): Promise<boolean> {
+  async deletarRelatorios(dataInicio: Date, dataFim: Date): Promise<number> {
     const pool = getPool();
-    const result = await pool.request().query(`DELETE FROM Relatorios`);
-    return result.rowsAffected[0] > 0;
+    const inicio = new Date(dataInicio);
+    inicio.setHours(0, 0, 0, 0);
+    const fim = new Date(dataFim);
+    fim.setHours(23, 59, 59, 999);
+
+    // Obter IDs dos relatórios a deletar
+    const selectResult = await pool
+      .request()
+      .input('dataInicio', sql.DateTime, inicio)
+      .input('dataFim', sql.DateTime, fim)
+      .query(`
+        SELECT id FROM Relatorios WHERE dataCaixa >= @dataInicio AND dataCaixa <= @dataFim
+      `);
+
+    const ids = selectResult.recordset.map((row: any) => row.id);
+
+    if (ids.length === 0) {
+      return 0;
+    }
+
+    // Deletar resumos de produtos
+    for (const id of ids) {
+      await pool
+        .request()
+        .input('relatorioId', sql.NVarChar(50), id)
+        .query(`
+          DELETE FROM ResumoProdutosRelatorio WHERE relatorioId = @relatorioId
+        `);
+    }
+
+    // Deletar relatórios
+    const result = await pool
+      .request()
+      .input('dataInicio', sql.DateTime, inicio)
+      .input('dataFim', sql.DateTime, fim)
+      .query(`
+        DELETE FROM Relatorios WHERE dataCaixa >= @dataInicio AND dataCaixa <= @dataFim
+      `);
+
+    return result.rowsAffected[0];
   }
 
   async deletarRelatorio(id: string): Promise<boolean> {
     const pool = getPool();
-    const result = await pool.request()
+
+    // Deletar resumos de produtos
+    await pool
+      .request()
+      .input('relatorioId', sql.NVarChar(50), id)
+      .query(`
+        DELETE FROM ResumoProdutosRelatorio WHERE relatorioId = @relatorioId
+      `);
+
+    // Deletar relatório
+    const result = await pool
+      .request()
       .input('id', sql.NVarChar(50), id)
-      .query(`DELETE FROM Relatorios WHERE id = @id`);
+      .query(`
+        DELETE FROM Relatorios WHERE id = @id
+      `);
+
     return result.rowsAffected[0] > 0;
+  }
+
+  private async obterResumoProdutos(relatorioId: string): Promise<ResumoProduto[]> {
+    const pool = getPool();
+
+    const result = await pool
+      .request()
+      .input('relatorioId', sql.NVarChar(50), relatorioId)
+      .query(`
+        SELECT * FROM ResumoProdutosRelatorio WHERE relatorioId = @relatorioId
+      `);
+
+    return result.recordset.map((row: any) => ({
+      produtoId: row.produtoId,
+      nomeProduto: row.nomeProduto,
+      quantidadeVendida: row.quantidadeVendida,
+      valorTotalVenda: row.valorTotalVenda,
+      lucro: row.lucro,
+    }));
   }
 }
 
