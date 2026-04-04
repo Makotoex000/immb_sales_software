@@ -4,13 +4,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const config: sql.config = {
-  server: process.env.DB_SERVER || 'localhost',
+  server: process.env.DB_SERVER || 'KUROI',
   database: process.env.DB_NAME || 'vendas_immb',
   authentication: {
     type: 'default',
     options: {
-      userName: process.env.DB_USER || 'sa',
-      password: process.env.DB_PASSWORD || 'Password123!',
+      userName: process.env.DB_USER || 'luxa_app_user',
+      password: process.env.DB_PASSWORD || 'senhasegurapracaralho',
     },
   },
   options: {

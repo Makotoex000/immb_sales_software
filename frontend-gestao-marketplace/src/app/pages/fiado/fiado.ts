@@ -3,12 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 
-interface VendaFiado {
-  id: string;
+interface VendaFiadoAgrupado {
   nomeBuyer: string;
+  ids: string[];
   total: number;
-  dataVenda: Date;
-  status: 'aberto' | 'fechado';
+  dataUltimaVenda: Date;
   itens?: any[];
 }
 
@@ -19,10 +18,10 @@ interface VendaFiado {
   styleUrl: './fiado.css'
 })
 export class Fiado implements OnInit {
-  fiados: VendaFiado[] = [];
+  fiados: VendaFiadoAgrupado[] = [];
   busca: string = '';
   modalAberto: boolean = false;
-  fiadoSelecionado: VendaFiado | null = null;
+  fiadoSelecionado: VendaFiadoAgrupado | null = null;
   formaPagamentoFiado: 'dinheiro' | 'cartao' | 'pix' = 'dinheiro';
   mensagemSucesso: string = '';
   mensagemErro: string = '';
@@ -36,33 +35,30 @@ export class Fiado implements OnInit {
 
   carregarFiados(): void {
     this.carregando = true;
-    this.apiService.obterTodosFiados().subscribe(
+    this.apiService.getFiadosAgrupados().subscribe(
       (response: any) => {
         this.carregando = false;
         if (response.success) {
-          this.fiados = (response.data || []).filter((f: any) => f.status === 'aberto');
+          this.fiados = response.data || [];
         } else {
           this.mensagemErro = 'Erro ao carregar fiados';
         }
       },
       (error: any) => {
         this.carregando = false;
-        console.error('Erro ao carregar fiados:', error);
         this.mensagemErro = 'Erro ao carregar fiados';
       }
     );
   }
 
-  get fiadosFiltrados(): VendaFiado[] {
-    if (!this.busca.trim()) {
-      return this.fiados;
-    }
+  get fiadosFiltrados(): VendaFiadoAgrupado[] {
+    if (!this.busca.trim()) return this.fiados;
     return this.fiados.filter(f =>
       f.nomeBuyer.toLowerCase().includes(this.busca.toLowerCase())
     );
   }
 
-  abrirModalFecharConta(fiado: VendaFiado): void {
+  abrirModalFecharConta(fiado: VendaFiadoAgrupado): void {
     this.fiadoSelecionado = fiado;
     this.formaPagamentoFiado = 'dinheiro';
     this.modalAberto = true;
@@ -80,29 +76,31 @@ export class Fiado implements OnInit {
     }
 
     this.carregando = true;
+    const ids = this.fiadoSelecionado.ids;
 
-    this.apiService.fecharFiado(this.fiadoSelecionado.id, {
-      formaPagamento: this.formaPagamentoFiado
-    }).subscribe(
-      (response: any) => {
+    const fecharProximo = (index: number) => {
+      if (index >= ids.length) {
         this.carregando = false;
-        if (response.success) {
-          this.mensagemSucesso = 'Conta fechada com sucesso!';
-          this.fecharModal();
-
-          setTimeout(() => {
-            this.mensagemSucesso = '';
-            this.carregarFiados();
-          }, 2000);
-        } else {
-          this.mensagemErro = response.error || 'Erro ao fechar conta';
-        }
-      },
-      (error: any) => {
-        this.carregando = false;
-        console.error('Erro ao fechar conta:', error);
-        this.mensagemErro = 'Erro ao fechar conta. Tente novamente.';
+        this.mensagemSucesso = 'Conta fechada com sucesso!';
+        this.fecharModal();
+        setTimeout(() => {
+          this.mensagemSucesso = '';
+          this.carregarFiados();
+        }, 2000);
+        return;
       }
-    );
+
+      this.apiService.fecharFiado(ids[index], {
+        formaPagamento: this.formaPagamentoFiado
+      }).subscribe(
+        () => fecharProximo(index + 1),
+        (error: any) => {
+          this.carregando = false;
+          this.mensagemErro = 'Erro ao fechar conta. Tente novamente.';
+        }
+      );
+    };
+
+    fecharProximo(0);
   }
 }

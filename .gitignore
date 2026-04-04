@@ -1,3 +1,26 @@
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-/.env
 
+backend-gestao-marketplace/dist/
+backend-gestao-marketplace/.env
+
+
+frontend-gestao-marketplace/dist/
+frontend-gestao-marketplace/.angular/
+
+
+backend-gestao-marketplace/node_modules/
+
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+.vscode/
+.idea/
+*.suo
+*.user

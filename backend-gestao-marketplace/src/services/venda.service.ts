@@ -101,6 +101,38 @@ class VendaServiceClass {
     const result = await pool.request().input('vendaId', sql.NVarChar(50), vendaId).query(`SELECT * FROM ItensVenda WHERE vendaId = @vendaId`);
     return result.recordset.map((row: any) => ({ id: row.id, vendaId: row.vendaId, produtoId: row.produtoId, nomeProduto: row.nomeProduto, quantidade: row.quantidade, valorUnitario: row.valorUnitario, subtotal: row.subtotal }));
   }
+
+  async totaisPorMetodo(dataInicio?: Date, dataFim?: Date): Promise<{ metodo: string; total: number; quantidade: number }[]> {
+  const pool = getPool();
+
+  let query = `
+    SELECT 
+      formaPagamento AS metodo,
+      SUM(total) AS total,
+      COUNT(*) AS quantidade
+    FROM Vendas
+    WHERE status = 'concluida'
+  `;
+
+  const request = pool.request();
+
+  if (dataInicio && dataFim) {
+    query += ` AND dataVenda >= @dataInicio AND dataVenda <= @dataFim`;
+    request.input('dataInicio', sql.DateTime, dataInicio);
+    request.input('dataFim', sql.DateTime, dataFim);
+  }
+
+  query += ` GROUP BY formaPagamento ORDER BY total DESC`;
+
+  const result = await request.query(query);
+
+  return result.recordset.map((row: any) => ({
+    metodo: row.metodo,
+    total: Number(row.total),
+    quantidade: Number(row.quantidade),
+  }));
+}
+
 }
 
 export const vendaService = new VendaServiceClass();

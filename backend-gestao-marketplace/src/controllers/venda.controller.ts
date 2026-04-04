@@ -141,3 +141,15 @@ export const deletarVenda = async (req: any, res: any) => {
     });
   }
 };
+
+export const totaisPorMetodo = async (req: any, res: any) => {
+  try {
+    const { dataInicio, dataFim } = req.query;
+    const inicio = dataInicio ? new Date(dataInicio as string) : undefined;
+    const fim = dataFim ? new Date(dataFim as string) : undefined;
+    const totais = await vendaService.totaisPorMetodo(inicio, fim);
+    res.json({ success: true, data: totais });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

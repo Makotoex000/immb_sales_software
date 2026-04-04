@@ -248,3 +248,12 @@ export const deletarFiado = async (req: any, res: any) => {
     });
   }
 };
+
+export const obterFiadosAgrupados = async (req: any, res: any) => {
+  try {
+    const fiados = await fiadoService.obterFiadosAgrupados();
+    res.json({ success: true, data: fiados });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

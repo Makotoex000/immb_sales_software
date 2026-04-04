@@ -3,6 +3,7 @@ import * as produtoController from '../controllers/produto.controller';
 import * as vendaController from '../controllers/venda.controller';
 import * as fiadoController from '../controllers/fiado.controller';
 import * as relatorioController from '../controllers/relatorio.controller';
+import * as impressoraController from '../controllers/impressora.controller';
 
 
 const router = Router();
@@ -22,8 +23,9 @@ router.delete('/produtos/:id', produtoController.deletarProduto);
 // Rotas de Vendas
 router.post('/vendas', vendaController.criarVenda);
 router.get('/vendas', vendaController.obterTodasVendas);
-router.get('/vendas/data', vendaController.obterVendasPorData);      
-router.get('/vendas/:id', vendaController.obterVendaPorId);          
+router.get('/vendas/totais-por-metodo', vendaController.totaisPorMetodo);
+router.get('/vendas/data', vendaController.obterVendasPorData);
+router.get('/vendas/:id', vendaController.obterVendaPorId);
 router.patch('/vendas/:id/desfazer', vendaController.desfazerVenda);
 router.delete('/vendas/:id', vendaController.deletarVenda);
 
@@ -31,6 +33,7 @@ router.delete('/vendas/:id', vendaController.deletarVenda);
 // Rotas de Fiados
 router.post('/fiados', fiadoController.criarFiado);
 router.get('/fiados', fiadoController.obterFiados);
+router.get('/fiados/agrupados', fiadoController.obterFiadosAgrupados);
 router.get('/fiados/nome', fiadoController.obterFiadoPorNome);
 router.get('/fiados/:id', fiadoController.obterFiadoPorId);
 router.post('/fiados/:id/itens', fiadoController.adicionarItensAoFiado);
@@ -46,6 +49,9 @@ router.get('/relatorios/data', relatorioController.obterRelatorioPorData);
 router.get('/relatorios/periodo', relatorioController.obterRelatorioPorPeriodo);
 router.delete('/relatorios', relatorioController.deletarRelatorios);
 router.delete('/relatorios/:id', relatorioController.deletarRelatorio);
+
+// Rotas de Impressora 
+router.post('/imprimir-pedido', impressoraController.imprimirPedido)
 
 
 export default router;

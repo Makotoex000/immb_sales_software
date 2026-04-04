@@ -13,7 +13,7 @@ class RelatorioServiceClass {
     await pool
       .request()
       .input('id', sql.NVarChar(50), id)
-      .input('dataCaixa', sql.DateTime, dto.dataCaixa)
+      .input('dataCaixa', sql.DateTime, dto.dataCaixa)  
       .input('totalVendas', sql.Int, dto.totalVendas)
       .input('lucroTotal', sql.Decimal(10, 2), dto.lucroTotal)
       .input('dataCriacao', sql.DateTime, agora)

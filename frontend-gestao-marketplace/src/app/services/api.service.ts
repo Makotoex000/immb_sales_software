@@ -152,4 +152,23 @@ export class ApiService {
   deletarRelatorio(id: string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/relatorios/${id}`);
   }
+
+  // Impressora
+  imprimirPedido(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/imprimir-pedido`, data);
+  }
+
+  // Totais por método de pagamento
+  getTotaisPorMetodo(dataInicio?: string, dataFim?: string): Observable<any> {
+    const params: any = {};
+    if (dataInicio) params['dataInicio'] = dataInicio;
+    if (dataFim) params['dataFim'] = dataFim;
+    return this.http.get(`${this.apiUrl}/vendas/totais-por-metodo`, { params });
+  }
+
+  // Fiados agrupados por nome
+  getFiadosAgrupados(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/fiados/agrupados`);
+  }
+  
 }

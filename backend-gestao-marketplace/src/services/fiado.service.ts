@@ -243,6 +243,68 @@ class FiadoServiceClass {
       subtotal: row.subtotal,
     }));
   }
+
+  async obterFiadosAgrupados(): Promise<{
+  nomeBuyer: string;
+  ids: string[];
+  itens: ItemVenda[];
+  total: number;
+  dataUltimaVenda: Date;
+}[]> {
+  const pool = getPool();
+
+  const result = await pool.request().query(`
+    SELECT * FROM VendasFiado WHERE status = 'aberto' ORDER BY nomeBuyer ASC, dataVenda DESC
+  `);
+
+  // Agrupa por nomeBuyer exato
+  const grupos: Record<string, {
+    nomeBuyer: string;
+    ids: string[];
+    itens: ItemVenda[];
+    total: number;
+    dataUltimaVenda: Date;
+  }> = {};
+
+  for (const row of result.recordset) {
+    const itens = await this.obterItensPorFiadoId(row.id);
+    const nome = row.nomeBuyer;
+
+    if (!grupos[nome]) {
+      grupos[nome] = {
+        nomeBuyer: nome,
+        ids: [],
+        itens: [],
+        total: 0,
+        dataUltimaVenda: row.dataVenda,
+      };
+    }
+
+    grupos[nome].ids.push(row.id);
+    grupos[nome].total += Number(row.total);
+
+    if (row.dataVenda > grupos[nome].dataUltimaVenda) {
+      grupos[nome].dataUltimaVenda = row.dataVenda;
+    }
+
+    // Mescla itens: se produto já existe no grupo, soma a quantidade
+    for (const item of itens) {
+      const existente = grupos[nome].itens.find(
+        i => i.produtoId === item.produtoId && i.valorUnitario === item.valorUnitario
+      );
+
+      if (existente) {
+        existente.quantidade += item.quantidade;
+        existente.subtotal += item.subtotal;
+      } else {
+        grupos[nome].itens.push({ ...item });
+      }
+    }
+  }
+
+  return Object.values(grupos);
+}
+
 }
 
 export const fiadoService = new FiadoServiceClass();

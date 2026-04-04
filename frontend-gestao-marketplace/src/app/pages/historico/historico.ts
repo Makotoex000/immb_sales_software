@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 
+
 interface Venda {
   id: string;
   total: number;
   formaPagamento: string;
   dataVenda: string;
   status: string;
+  nomeCliente?: string;
   itens?: any[];
 }
 
@@ -124,4 +126,19 @@ export class Historico implements OnInit {
       );
     }
   }
+
+  // Req 4 — azul para fiado, verde para normal
+  corDaVenda(venda: Venda): string {
+    return venda.status === 'fiado'
+      ? 'border-l-4 border-blue-500 bg-blue-50'
+      : 'border-l-4 border-green-500 bg-green-50';
+  }
+
+  // Req 4 — badge de status
+  badgeDaVenda(venda: Venda): string {
+    return venda.status === 'fiado'
+      ? 'bg-blue-100 text-blue-800'
+      : 'bg-green-100 text-green-800';
+  }
+  
 }

@@ -103,27 +103,28 @@ export interface CreateItemVendaDTO {
 // --- RELATÓRIOS ---
 export interface ResumoProduto {
   produtoId: string;
-  nome: string;
-  quantidade: number;
-  totalVendido: number;
+  nomeProduto: string;       // was: nome
+  quantidadeVendida: number; // was: quantidade
+  valorTotalVenda: number;   // was: totalVendido
+  lucro: number;             // missing
 }
 
 export interface Relatorio {
   id: string;
-  dataRelatorio: Date;
+  dataCaixa: Date;           // was: dataRelatorio
+  vendas: any[];             // missing
   totalVendas: number;
-  quantidadeVendas: number;
-  metodoPagamentoMaisUsado: string;
-  produtosMaisVendidos: ResumoProduto[];
+  lucroTotal: number;        // was: quantidadeVendas + metodoPagamentoMaisUsado
+  resumoProdutos: ResumoProduto[]; // was: produtosMaisVendidos
   dataCriacao: Date;
 }
 
 export interface CreateRelatorioDTO {
-  dataRelatorio: Date;
+  dataCaixa: Date;           // was: dataRelatorio
+  vendas: any[];             // missing
   totalVendas: number;
-  quantidadeVendas: number;
-  metodoPagamentoMaisUsado: string;
-  produtosMaisVendidos: ResumoProduto[];
+  lucroTotal: number;        // was: quantidadeVendas + metodoPagamentoMaisUsado
+  resumoProdutos: ResumoProduto[]; // was: produtosMaisVendidos
 }
 
 // --- GERAL ---

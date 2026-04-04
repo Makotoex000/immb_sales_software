@@ -118,7 +118,26 @@ export class Vendas implements OnInit {
     this.total = this.carrinho.reduce((acc, item) => acc + item.subtotal, 0);
   }
 
+  // Req 3 — chama impressão após venda
+  private imprimirPedido(venda: any, vendaId: string) {
+    const payload = {
+      numeroPedido: vendaId.substring(0, 8).toUpperCase(),
+      nomeCliente: this.nomeCliente || undefined,
+      itens: this.carrinho,
+      total: this.total,
+      formaPagamento: this.formaPagamento,
+      qrCodePix: '00020101021126330014br.gov.bcb.pix0111489915878525204000053039865802BR5922GABRIELLE ANTUNES DANA6009SAO PAULO622905251KMRPAKZA4R6M86GX5R2CZ6X16304417B'
+    };
+
+    this.http.post(`${this.baseUrl}/imprimir-pedido`, payload).subscribe({
+      next: () => console.log('✅ Impresso com sucesso'),
+      error: (err) => console.warn('⚠️ Impressão falhou:', err.message)
+    });
+  }
+
+
   // Finaliza a venda (Normal ou Fiado)
+   // Req 1 + 2 + 3 — finaliza venda normal
   finalizarVenda() {
     if (this.carrinho.length === 0) {
       alert('Adicione pelo menos um produto ao carrinho.');
@@ -130,15 +149,18 @@ export class Vendas implements OnInit {
       return;
     }
 
+    // Req 1 — nome do cliente opcional para venda normal
     const venda = {
       itens: this.carrinho,
       total: this.total,
       formaPagamento: this.formaPagamento,
-      nomeCliente: this.nomeCliente
+      nomeCliente: this.nomeCliente || undefined
     };
 
-    this.http.post(this.vendasUrl, venda ).subscribe({
-      next: () => {
+    this.http.post<any>(this.vendasUrl, venda).subscribe({
+      next: (res) => {
+        // Req 3 — imprime ao finalizar
+        this.imprimirPedido(venda, res.data?.id || 'SN');
         alert('Venda finalizada com sucesso!');
         this.limparVenda();
         this.carregarProdutos();
@@ -163,8 +185,10 @@ export class Vendas implements OnInit {
       total: this.total
     };
 
-    this.http.post(this.fiadosUrl, fiado ).subscribe({
-      next: () => {
+    this.http.post<any>(this.fiadosUrl, fiado).subscribe({
+      next: (res) => {
+        // Req 3 — imprime ao registrar fiado também
+        this.imprimirPedido(fiado, res.data?.id || 'SN');
         alert('Venda fiado registrada com sucesso!');
         this.limparVenda();
         this.carregarProdutos();
