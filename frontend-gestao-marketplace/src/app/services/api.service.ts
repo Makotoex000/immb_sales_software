@@ -11,6 +11,13 @@ export class ApiService {
 
   constructor(private http: HttpClient) {}
 
+  // Envia o arquivo da imagem e recebe o caminho salvo ({ data: { url: '/uploads/...' } })
+  uploadImagem(arquivo: File): Observable<any> {
+    return this.http.post(`${this.apiUrl}/uploads/imagem`, arquivo, {
+      headers: { 'Content-Type': arquivo.type }
+    });
+  }
+
   // Produtos
   criarProduto(data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/produtos`, data);

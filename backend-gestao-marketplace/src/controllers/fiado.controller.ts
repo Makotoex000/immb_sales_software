@@ -1,10 +1,10 @@
 import { fiadoService } from '../services/fiado.service';
-import { vendaService } from '../services/venda.service';
+import { vendaService, calcularDesconto, somarItens } from '../services/venda.service';
 import { CreateVendaWithStatusDTO } from '../types';
 
 export const criarFiado = async (req: any, res: any) => {
   try {
-    const { nomeBuyer, itens, total } = req.body;
+    const { nomeBuyer, itens, total, descontoTipo, descontoValor } = req.body;
 
     if (!nomeBuyer || !itens || itens.length === 0) {
       return res.status(400).json({
@@ -13,10 +13,18 @@ export const criarFiado = async (req: any, res: any) => {
       });
     }
 
+    try {
+      calcularDesconto(somarItens(itens), descontoTipo, descontoValor);
+    } catch (e: any) {
+      return res.status(400).json({ success: false, error: e.message });
+    }
+
     const fiado = await fiadoService.criarFiado({
       nomeBuyer,
       itens,
-      total
+      total,
+      descontoTipo,
+      descontoValor
     });
 
     res.status(201).json({
@@ -188,6 +196,8 @@ export const fecharFiado = async (req: any, res: any) => {
         const vendaData: CreateVendaWithStatusDTO = {
           itens: fiadoAberto.itens,
           total: fiadoAberto.total,
+          descontoTipo: fiadoAberto.desconto > 0 ? 'valor' : undefined,
+          descontoValor: fiadoAberto.desconto > 0 ? fiadoAberto.desconto : undefined,
           formaPagamento: formaPagamento,
           status: 'fiado',
           nomeCliente: fiadoAberto.nomeBuyer || 'Cliente'

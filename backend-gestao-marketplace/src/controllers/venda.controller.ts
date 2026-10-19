@@ -1,8 +1,8 @@
-import { vendaService } from '../services/venda.service';
+import { vendaService, calcularDesconto, somarItens } from '../services/venda.service';
 
 export const criarVenda = async (req: any, res: any) => {
   try {
-    const { itens, total, formaPagamento } = req.body;
+    const { itens, total, formaPagamento, nomeCliente, descontoTipo, descontoValor } = req.body;
 
     if (!itens || itens.length === 0) {
       return res.status(400).json({
@@ -11,10 +11,19 @@ export const criarVenda = async (req: any, res: any) => {
       });
     }
 
+    try {
+      calcularDesconto(somarItens(itens), descontoTipo, descontoValor);
+    } catch (e: any) {
+      return res.status(400).json({ success: false, error: e.message });
+    }
+
     const venda = await vendaService.criarVenda({
       itens,
       total,
-      formaPagamento
+      formaPagamento,
+      nomeCliente,
+      descontoTipo,
+      descontoValor
     });
 
     res.status(201).json({

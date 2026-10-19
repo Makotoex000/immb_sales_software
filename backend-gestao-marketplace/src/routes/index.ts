@@ -1,15 +1,20 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import * as produtoController from '../controllers/produto.controller';
 import * as vendaController from '../controllers/venda.controller';
 import * as fiadoController from '../controllers/fiado.controller';
 import * as relatorioController from '../controllers/relatorio.controller';
 import * as impressoraController from '../controllers/impressora.controller';
+import * as uploadController from '../controllers/upload.controller';
+import { TAMANHO_MAXIMO_IMAGEM } from '../services/upload.service';
 
 
 const router = Router();
 
 
 // Rotas de Produtos
+// Upload de imagem de produto (corpo binário, Content-Type: image/...)
+router.post('/uploads/imagem', express.raw({ type: 'image/*', limit: TAMANHO_MAXIMO_IMAGEM }), uploadController.uploadImagem);
+
 router.post('/produtos', produtoController.criarProduto);
 router.get('/produtos', produtoController.obterProdutos);
 router.get('/produtos/ativos', produtoController.obterProdutosAtivos);

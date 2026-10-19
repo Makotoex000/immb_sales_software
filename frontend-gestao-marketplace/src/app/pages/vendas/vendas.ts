@@ -2,11 +2,12 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { ImagemUrlPipe } from '../../pipes/imagem-url.pipe';
 
 @Component({
   selector: 'app-vendas',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ImagemUrlPipe],
   templateUrl: './vendas.html',
   styleUrl: './vendas.css'
 } )
@@ -16,9 +17,11 @@ export class Vendas implements OnInit {
   produtosFiltrados: any[] = [];
   carrinho: any[] = [];
   filtro: string = '';
-  total: number = 0;
+  subtotal: number = 0;
   formaPagamento: string = 'dinheiro';
   nomeCliente: string = '';
+  descontoTipo: 'percentual' | 'valor' = 'percentual';
+  descontoValor: number | null = null;
   
   // URLs da API (Usando IP para evitar erro de resolução de nome)
   private readonly baseUrl = 'http://127.0.0.1:3000/api';
@@ -113,9 +116,42 @@ export class Vendas implements OnInit {
     }
   }
 
-  // Calcula o valor total da venda
+  // Soma dos itens do carrinho, antes do desconto
   calcularTotal() {
-    this.total = this.carrinho.reduce((acc, item) => acc + item.subtotal, 0);
+    this.subtotal = this.carrinho.reduce((acc, item) => acc + item.subtotal, 0);
+  }
+
+  // Mensagem de erro se o desconto digitado for inválido
+  get erroDesconto(): string | null {
+    const valor = this.descontoValor || 0;
+    if (valor < 0) return 'O desconto não pode ser negativo.';
+    if (this.descontoTipo === 'percentual' && valor > 100) return 'O desconto não pode passar de 100%.';
+    if (this.descontoTipo === 'valor' && valor > this.subtotal) return 'O desconto não pode ser maior que o subtotal.';
+    return null;
+  }
+
+  // Desconto em R$ (convertido de % quando for o caso)
+  get desconto(): number {
+    const valor = this.descontoValor || 0;
+    if (valor <= 0 || this.erroDesconto) return 0;
+    const desconto = this.descontoTipo === 'percentual' ? this.subtotal * valor / 100 : valor;
+    return Math.round(desconto * 100) / 100;
+  }
+
+  get total(): number {
+    return Math.round((this.subtotal - this.desconto) * 100) / 100;
+  }
+
+  alterarTipoDesconto(tipo: 'percentual' | 'valor') {
+    this.descontoTipo = tipo;
+    this.descontoValor = null;
+  }
+
+  // Campos de desconto enviados ao backend (omitidos quando não há desconto)
+  private dadosDesconto() {
+    return this.desconto > 0
+      ? { descontoTipo: this.descontoTipo, descontoValor: this.descontoValor }
+      : {};
   }
 
   // Req 3 — chama impressão após venda
@@ -124,14 +160,19 @@ export class Vendas implements OnInit {
       numeroPedido: vendaId.substring(0, 8).toUpperCase(),
       nomeCliente: this.nomeCliente || undefined,
       itens: this.carrinho,
+      subtotal: this.subtotal,
+      desconto: this.desconto,
       total: this.total,
       formaPagamento: this.formaPagamento,
-      qrCodePix: '00020101021126330014br.gov.bcb.pix0111489915878525204000053039865802BR5922GABRIELLE ANTUNES DANA6009SAO PAULO622905251KMRPAKZA4R6M86GX5R2CZ6X16304417B'
+      qrCodePix: '00020101021126580014br.gov.bcb.pix01369f88981f-6dd6-4d49-906c-2dd2f6e0eb225204000053039865802BR5917VICTOR H BERTANHA6008SOROCABA62070503***63044B6A'
     };
 
     this.http.post(`${this.baseUrl}/imprimir-pedido`, payload).subscribe({
       next: () => console.log('✅ Impresso com sucesso'),
-      error: (err) => console.warn('⚠️ Impressão falhou:', err.message)
+      error: (err) => {
+        console.warn('⚠️ Impressão falhou:', err);
+        alert('A venda foi registrada, mas o cupom não foi impresso.\n\n' + (err.error?.error || 'Sem conexão com o backend.'));
+      }
     });
   }
 
@@ -141,6 +182,11 @@ export class Vendas implements OnInit {
   finalizarVenda() {
     if (this.carrinho.length === 0) {
       alert('Adicione pelo menos um produto ao carrinho.');
+      return;
+    }
+
+    if (this.erroDesconto) {
+      alert(this.erroDesconto);
       return;
     }
 
@@ -154,7 +200,8 @@ export class Vendas implements OnInit {
       itens: this.carrinho,
       total: this.total,
       formaPagamento: this.formaPagamento,
-      nomeCliente: this.nomeCliente || undefined
+      nomeCliente: this.nomeCliente || undefined,
+      ...this.dadosDesconto()
     };
 
     this.http.post<any>(this.vendasUrl, venda).subscribe({
@@ -167,7 +214,7 @@ export class Vendas implements OnInit {
       },
       error: (err) => {
         console.error('Erro na venda:', err);
-        alert('Erro ao processar venda. Verifique a conexão.');
+        alert(err.error?.error || 'Erro ao processar venda. Verifique a conexão.');
       }
     });
   }
@@ -182,7 +229,8 @@ export class Vendas implements OnInit {
     const fiado = {
       nomeBuyer: this.nomeCliente,
       itens: this.carrinho,
-      total: this.total
+      total: this.total,
+      ...this.dadosDesconto()
     };
 
     this.http.post<any>(this.fiadosUrl, fiado).subscribe({
@@ -195,7 +243,7 @@ export class Vendas implements OnInit {
       },
       error: (err) => {
         console.error('Erro no fiado:', err);
-        alert('Erro ao registrar fiado.');
+        alert(err.error?.error || 'Erro ao registrar fiado.');
       }
     });
   }
@@ -203,7 +251,9 @@ export class Vendas implements OnInit {
   // Reseta os campos da tela após uma operação
   limparVenda() {
     this.carrinho = [];
-    this.total = 0;
+    this.subtotal = 0;
+    this.descontoTipo = 'percentual';
+    this.descontoValor = null;
     this.nomeCliente = '';
     this.formaPagamento = 'dinheiro';
     this.filtro = '';

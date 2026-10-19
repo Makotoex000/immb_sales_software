@@ -13,7 +13,7 @@
         <input
           [(ngModel)]="dataFiltro"
           type="date"
-          class="w-full px-4 py-3 border-2 border-green-200 rounded-lg focus:border-green-600 focus:outline-none" />
+          class="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:border-green-600 focus:ring-2 focus:ring-green-100 focus:outline-none" />
       </div>
       <div class="flex items-end">
         <button
@@ -56,9 +56,18 @@
         <div class="mb-6 bg-gray-50 rounded-lg p-4">
           <h3 class="font-semibold text-gray-700 mb-3">Produtos:</h3>
           <div class="space-y-2">
-            <div *ngFor="let item of venda.itens" class="flex justify-between text-gray-700">
+            <div *ngFor="let item of venda.itens" class="flex justify-between items-start text-gray-700">
               <span>{{ item.nomeProduto }} (x{{ item.quantidade }})</span>
-              <span class="font-semibold">R$ {{ item.subtotal.toFixed(2) }}</span>
+              <span *ngIf="!item.descontoItem" class="font-semibold">R$ {{ item.subtotal.toFixed(2) }}</span>
+              <span *ngIf="item.descontoItem" class="text-right">
+                <span class="block text-sm text-gray-400 line-through">R$ {{ item.subtotal.toFixed(2) }}</span>
+                <span class="block text-sm text-red-500">- R$ {{ item.descontoItem.toFixed(2) }}</span>
+                <span class="block font-semibold">R$ {{ item.totalComDesconto.toFixed(2) }}</span>
+              </span>
+            </div>
+            <div *ngIf="venda.desconto && venda.desconto > 0" class="flex justify-between text-red-500 border-t border-gray-200 pt-2">
+              <span>Desconto total{{ venda.descontoTipo === 'percentual' ? ' (' + venda.descontoValor + '%)' : '' }}</span>
+              <span class="font-semibold">- R$ {{ venda.desconto.toFixed(2) }}</span>
             </div>
           </div>
         </div>

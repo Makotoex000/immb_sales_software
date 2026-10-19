@@ -26,6 +26,9 @@
             ],
             "styles": [
               "src/styles.css"
+            ],
+            "allowedCommonJsDependencies": [
+              "exceljs"
             ]
           },
           "configurations": {
@@ -88,5 +91,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "d9f66fd8-50b9-4937-9ed8-0beb29c2e645"
   }
 }

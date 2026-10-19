@@ -6,7 +6,7 @@ Este é o repositório do sistema de gestão de marketplace **IMMB Vendas**, uma
 
 -   **Gestão Completa de Produtos:**
     -   Criação, edição e exclusão de produtos com controle de estoque.
-    -   Exclusão em cascata: ao deletar um produto, todas as suas referências em vendas e fiados são automaticamente removidas, garantindo a integridade do banco de dados.
+    -   Exclusão de produtos sem perder histórico: vendas e fiados já registrados continuam com o nome e o preço do produto excluído.
     -   Ativação e desativação de produtos.
 
 -   **Controle de Vendas:**
@@ -35,7 +35,7 @@ Este é o repositório do sistema de gestão de marketplace **IMMB Vendas**, uma
 
 ### Banco de Dados
 
--   **SQL Server:** Sistema de gerenciamento de banco de dados relacional, escolhido pela sua robustez e capacidade de lidar com grandes volumes de dados. Configurado com `ON DELETE CASCADE` para garantir a integridade referencial e simplificar a exclusão de registros relacionados.
+-   **SQL Server:** Sistema de gerenciamento de banco de dados relacional, escolhido pela sua robustez e capacidade de lidar com grandes volumes de dados.
 
 ### Frontend (Angular)
 
@@ -58,38 +58,8 @@ Siga os passos abaixo para configurar e rodar o projeto em seu ambiente local.
 
 1.  Crie um novo banco de dados no seu SQL Server (ex: `vendas_immb`).
 2.  Execute os scripts SQL para criar as tabelas `Produtos`, `Vendas`, `ItensVenda`, `Fiados`, `ItensFiado`, `Relatorios` e `ResumoProdutosRelatorio`.
-3.  **Configuração de Chaves Estrangeiras com `ON DELETE CASCADE`:**
-    Para garantir a exclusão em cascata e evitar erros de integridade, execute os seguintes comandos SQL:
-
-    ```sql
-    -- Para ResumoProdutosRelatorio
-    IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__ResumoPro__produ__4F7CD00D')
-    BEGIN
-        ALTER TABLE dbo.ResumoProdutosRelatorio DROP CONSTRAINT FK__ResumoPro__produ__4F7CD00D;
-    END
-    ALTER TABLE dbo.ResumoProdutosRelatorio WITH CHECK ADD CONSTRAINT FK_ResumoProdutos_Produtos 
-    FOREIGN KEY (produtoId) REFERENCES dbo.Produtos (id) ON DELETE CASCADE;
-
-    -- Para ItensVenda
-    DECLARE @fkNameVenda NVARCHAR(200);
-    SELECT @fkNameVenda = name FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID('ItensVenda') AND referenced_object_id = OBJECT_ID('Produtos');
-    IF @fkNameVenda IS NOT NULL
-    BEGIN
-        EXEC('ALTER TABLE ItensVenda DROP CONSTRAINT ' + @fkNameVenda);
-    END
-    ALTER TABLE dbo.ItensVenda WITH CHECK ADD CONSTRAINT FK_ItensVenda_Produtos 
-    FOREIGN KEY (produtoId) REFERENCES dbo.Produtos (id) ON DELETE CASCADE;
-
-    -- Para ItensFiado
-    DECLARE @fkNameFiado NVARCHAR(200);
-    SELECT @fkNameFiado = name FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID('ItensFiado') AND referenced_object_id = OBJECT_ID('Produtos');
-    IF @fkNameFiado IS NOT NULL
-    BEGIN
-        EXEC('ALTER TABLE ItensFiado DROP CONSTRAINT ' + @fkNameFiado);
-    END
-    ALTER TABLE dbo.ItensFiado WITH CHECK ADD CONSTRAINT FK_ItensFiado_Produtos 
-    FOREIGN KEY (produtoId) REFERENCES dbo.Produtos (id) ON DELETE CASCADE;
-    ```
+3.  **Exclusão de produtos e histórico:**
+    Os itens de venda, de fiado e os resumos de relatório guardam uma cópia do nome e do preço do produto, por isso **não** têm chave estrangeira para `Produtos`. Assim, excluir um produto não é bloqueado e o histórico de vendas continua intacto. O backend remove essas chaves automaticamente ao iniciar (em `src/config/init-db.ts`). **Não** recrie essas chaves com `ON DELETE CASCADE`: isso apagaria as linhas do histórico de vendas e fiados junto com o produto.
 
 4.  **Adicionar Colunas Necessárias à Tabela `Produtos`:**
     Certifique-se de que a tabela `Produtos` possui as seguintes colunas:

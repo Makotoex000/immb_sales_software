@@ -1,87 +1,47 @@
-<div class="w-full flex justify-between items-center p-4 border-b-2 border-green-200 bg-white">
+<aside class="w-60 shrink-0 h-full flex flex-col bg-green-600 text-white">
   <!-- Logo IMMB -->
-  <div class="flex items-center">
-    <div class="bg-green-600 text-white font-bold text-2xl px-4 py-2 rounded-lg">IMMB</div>
+  <div class="flex items-center gap-3 px-5 pt-6 pb-5">
+    <div class="w-10 h-10 rounded-full bg-white p-0.5 shrink-0">
+      <img src="logo-immb.png" alt="IMMB" class="w-full h-full rounded-full object-contain">
+    </div>
+    <div class="leading-tight">
+      <p class="font-serif font-semibold text-lg text-white">IMMB</p>
+      <p class="text-xs text-green-200">Vendas</p>
+    </div>
+  </div>
+
+  <!-- Novo Produto -->
+  <div class="px-4 pb-5">
+    <a
+      routerLink="/novo-produto"
+      routerLinkActive="ring-2 ring-yellow-200"
+      class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-yellow-500 text-green-700 text-sm font-semibold hover:bg-yellow-400 transition-colors">
+      <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Novo Produto
+    </a>
   </div>
 
   <!-- Menu de Navegação -->
-  <div class="flex items-center gap-4">
-    <!-- Botão Produtos -->
-    <button
-      (click)="navegarPara('produtos')"
-      [class.active]="paginaAtual === 'produtos'"
-      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
-      [ngClass]="paginaAtual === 'produtos' 
-        ? 'bg-green-600 text-white' 
-        : 'bg-green-50 text-green-700 hover:bg-green-100'">
-      <span class="text-sm font-medium">Produtos</span>
-    </button>
+  <nav class="flex-1 flex flex-col gap-1 px-3">
+    @for (pagina of paginas; track pagina.rota) {
+      <a
+        [routerLink]="pagina.rota"
+        routerLinkActive
+        #link="routerLinkActive"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
+        [ngClass]="link.isActive
+          ? 'bg-white/10 text-white font-semibold'
+          : 'text-green-200 hover:bg-white/5 hover:text-white'">
+        <svg viewBox="0 0 24 24" class="w-[18px] h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          @for (d of pagina.icone; track $index) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        {{ pagina.nome }}
+      </a>
+    }
+  </nav>
 
-    <!-- Botão Vendas -->
-    <button
-      (click)="navegarPara('vendas')"
-      [class.active]="paginaAtual === 'vendas'"
-      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
-      [ngClass]="paginaAtual === 'vendas' 
-        ? 'bg-green-600 text-white' 
-        : 'bg-green-50 text-green-700 hover:bg-green-100'">
-      <span class="text-sm font-medium">Vendas</span>
-    </button>
-
-    <!-- Botão Fiado -->
-    <button
-      (click)="navegarPara('fiado')"
-      [class.active]="paginaAtual === 'fiado'"
-      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
-      [ngClass]="paginaAtual === 'fiado' 
-        ? 'bg-green-600 text-white' 
-        : 'bg-green-50 text-green-700 hover:bg-green-100'">
-      <span class="text-sm font-medium">Fiado</span>
-    </button>
-
-    <!-- Botão Histórico -->
-    <button
-      (click)="navegarPara('historico')"
-      [class.active]="paginaAtual === 'historico'"
-      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
-      [ngClass]="paginaAtual === 'historico' 
-        ? 'bg-green-600 text-white' 
-        : 'bg-green-50 text-green-700 hover:bg-green-100'">
-      <span class="text-sm font-medium">Histórico</span>
-    </button>
-
-    <!-- Botão Fechamento -->
-    <button
-      (click)="navegarPara('fechamento')"
-      [class.active]="paginaAtual === 'fechamento'"
-      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
-      [ngClass]="paginaAtual === 'fechamento' 
-        ? 'bg-green-600 text-white' 
-        : 'bg-green-50 text-green-700 hover:bg-green-100'">
-      <span class="text-sm font-medium">Fechamento</span>
-    </button>
-
-    <!-- Botão Gerenciamento -->
-    <button
-      (click)="navegarPara('gerenciamento')"
-      [class.active]="paginaAtual === 'gerenciamento'"
-      class="flex items-center px-4 py-2 rounded-lg transition-all duration-200 ease-in-out"
-      [ngClass]="paginaAtual === 'gerenciamento' 
-        ? 'bg-green-600 text-white' 
-        : 'bg-green-50 text-green-700 hover:bg-green-100'">
-      <span class="text-sm font-medium">Gerenciamento</span>
-    </button>
-  </div>
-
-  <!-- Container Botão Novo Produto e Logout -->
-  <div class="flex items-center gap-3">
-    <!-- Botão Novo Produto -->
-    <button
-      (click)="navegarPara('novo-produto')"
-      class="flex items-center px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-all duration-200 ease-in-out active:translate-y-1">
-      <span class="text-sm font-medium">+ Novo Produto</span>
-    </button>
-
-
-  </div>
-</div>
+  <div class="mx-5 border-t border-white/10"></div>
+  <p class="px-5 py-4 font-mono text-[10px] uppercase text-green-300">Sistema de gestão</p>
+</aside>

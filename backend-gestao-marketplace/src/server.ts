@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { connectDatabase } from './config/database';
 import { initializeDatabase } from './config/init-db';
 import routes from './routes';
+import { UPLOADS_DIR, UPLOADS_URL } from './services/upload.service';
 
 dotenv.config();
 
@@ -20,8 +21,19 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'Servidor rodando' });
 });
 
+// Imagens dos produtos enviadas por upload
+app.use(UPLOADS_URL, express.static(UPLOADS_DIR, { maxAge: '7d' }));
+
 // Rotas da API
 app.use('/api', routes);
+
+// Erros de leitura do corpo da requisição (ex: imagem maior que o limite) em JSON
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ success: false, error: 'Arquivo muito grande. O limite é 5 MB.' });
+  }
+  next(err);
+});
 
 // Inicializar servidor
 async function startServer() {

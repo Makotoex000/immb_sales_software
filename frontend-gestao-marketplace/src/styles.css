@@ -1,11 +1,119 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @import "tailwindcss";
 
-html {
-  font-family: 'Poppins', sans-serif;
+/*
+ * Tema IMMB: verde-floresta escuro + dourado sobre fundo creme.
+ * As escalas abaixo substituem as cores padrão do Tailwind, então as classes já usadas
+ * nas telas (bg-green-600, text-gray-700, bg-red-100...) passam a usar esta paleta.
+ */
+@theme {
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Fraunces', ui-serif, Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Verde-floresta (cor principal) */
+  --color-green-50: #eef2ef;
+  --color-green-100: #dde6e1;
+  --color-green-200: #c5d3cb;
+  --color-green-300: #9fb5a9;
+  --color-green-400: #6f8f81;
+  --color-green-500: #3d5f55;
+  --color-green-600: #17302b;
+  --color-green-700: #10241f;
+  --color-green-800: #0c1b17;
+  --color-green-900: #08120f;
+
+  /* Neutros quentes (creme / pedra) */
+  --color-gray-50: #f5f4ef;
+  --color-gray-100: #efede6;
+  --color-gray-200: #e4e1d8;
+  --color-gray-300: #d0ccc1;
+  --color-gray-400: #9f9a8e;
+  --color-gray-500: #78746a;
+  --color-gray-600: #5a574f;
+  --color-gray-700: #3d3b35;
+  --color-gray-800: #1f2b27;
+  --color-gray-900: #141c1a;
+
+  /* Dourado (destaque) */
+  --color-yellow-50: #fbf6e6;
+  --color-yellow-100: #f5e9c4;
+  --color-yellow-200: #ecd894;
+  --color-yellow-300: #e0c160;
+  --color-yellow-400: #d4ad3d;
+  --color-yellow-500: #c9a030;
+  --color-yellow-600: #a88424;
+  --color-yellow-700: #85681c;
+  --color-yellow-800: #5e4914;
+
+  /* Terracota (alertas, erros, exclusão) */
+  --color-red-50: #fbf1eb;
+  --color-red-100: #f6e2d7;
+  --color-red-200: #edc4b2;
+  --color-red-300: #df9d84;
+  --color-red-400: #cd7659;
+  --color-red-500: #b75b3f;
+  --color-red-600: #9f4833;
+  --color-red-700: #823929;
+  --color-red-800: #5e291e;
+
+  /* Azul-petróleo (fiado) */
+  --color-blue-50: #edf3f3;
+  --color-blue-100: #d6e4e5;
+  --color-blue-500: #4d7c84;
+  --color-blue-600: #3a646c;
+  --color-blue-700: #2c4f56;
+
+  /* Tons de apoio usados em poucos cards */
+  --color-orange-600: #b06d2a;
+  --color-purple-600: #6c5a7c;
+
+  /* Sombras mais suaves, como nos cards de referência */
+  --shadow-sm: 0 1px 2px 0 rgb(23 48 43 / 0.04);
+  --shadow: 0 1px 3px 0 rgb(23 48 43 / 0.06), 0 1px 2px -1px rgb(23 48 43 / 0.04);
+  --shadow-md: 0 4px 10px -2px rgb(23 48 43 / 0.08), 0 2px 4px -2px rgb(23 48 43 / 0.05);
+  --shadow-lg: 0 10px 24px -6px rgb(23 48 43 / 0.12), 0 4px 8px -4px rgb(23 48 43 / 0.06);
+  --shadow-xl: 0 18px 36px -10px rgb(23 48 43 / 0.16), 0 8px 12px -6px rgb(23 48 43 / 0.06);
 }
 
-body {
-  background-color: #FBF4F4;
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-gray-800);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--color-gray-50);
+  }
+
+  /* Títulos em serifa, como "Visão geral" / "Entrar" */
+  h1, h2, h3 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.01em;
+    color: var(--color-gray-800);
+  }
+
+  /* Rótulos em maiúsculas em fonte mono, como "SISTEMA DE GESTÃO" / cabeçalhos de tabela */
+  .uppercase {
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+  }
+
+  /* Cards brancos com borda fina em vez de só sombra */
+  .bg-white.rounded-lg,
+  .bg-white.rounded-xl,
+  .bg-white.rounded-2xl {
+    border: 1px solid var(--color-gray-200);
+  }
+
+  input, select, textarea {
+    font-family: var(--font-sans);
+  }
+
+  ::selection {
+    background: var(--color-yellow-200);
+    color: var(--color-green-700);
+  }
 }

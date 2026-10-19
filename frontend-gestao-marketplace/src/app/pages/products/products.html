@@ -2,7 +2,7 @@
   <!-- Cabeçalho -->
   <div class="mb-8">
     <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-      <span class="text-3xl">📦</span> Gerenciamento de Produtos
+      Gerenciamento de Produtos
     </h2>
     <p class="text-gray-500 text-sm">Visualize e gerencie o estoque do seu marketplace</p>
   </div>
@@ -13,7 +13,7 @@
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group">
         <!-- Imagem -->
         <div class="relative h-48 bg-gray-100 overflow-hidden">
-          <img [src]="p.imagem || 'https://via.placeholder.com/400x300?text=Sem+Imagem'" 
+          <img [src]="p.imagem | imagemUrl:'https://via.placeholder.com/400x300?text=Sem+Imagem'"
             class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
             alt="Produto">
           <div class="absolute top-2 right-2">
@@ -93,9 +93,17 @@
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">URL da Imagem</label>
-            <input type="text" [(ngModel)]="produtoSelecionado.imagem" 
-              class="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-green-500 transition-all outline-none text-gray-700 font-medium">
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Imagem</label>
+            <div class="flex items-center gap-3">
+              @if (produtoSelecionado.imagem) {
+                <img [src]="produtoSelecionado.imagem | imagemUrl" alt="Imagem do produto" class="w-16 h-16 object-cover rounded-xl bg-gray-100">
+              }
+              <input #imagemInput type="file" accept="image/jpeg,image/png,image/webp,image/gif" (change)="onImagemSelecionada($event)" class="hidden">
+              <button type="button" (mousedown)="imagemInput.click()" [disabled]="enviandoImagem"
+                class="px-4 py-3 rounded-xl bg-gray-50 text-gray-700 font-medium hover:bg-gray-100 transition-all disabled:opacity-50">
+                {{ enviandoImagem ? 'Enviando...' : (produtoSelecionado.imagem ? 'Trocar imagem' : 'Escolher imagem') }}
+              </button>
+            </div>
           </div>
         </div>
 

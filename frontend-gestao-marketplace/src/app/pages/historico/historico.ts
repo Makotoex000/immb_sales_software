@@ -7,6 +7,10 @@ import { ApiService } from '../../services/api.service';
 interface Venda {
   id: string;
   total: number;
+  subtotal?: number;
+  desconto?: number;
+  descontoTipo?: 'percentual' | 'valor';
+  descontoValor?: number;
   formaPagamento: string;
   dataVenda: string;
   status: string;
@@ -40,6 +44,7 @@ export class Historico implements OnInit {
         this.carregando = false;
         if (response.success) {
           this.vendas = response.data || [];
+          this.vendas.forEach(venda => this.distribuirDesconto(venda));
         } else {
           this.mensagemErro = 'Erro ao carregar vendas';
         }
@@ -50,6 +55,27 @@ export class Historico implements OnInit {
         this.mensagemErro = 'Erro ao carregar vendas';
       }
     );
+  }
+
+  // Divide o desconto da venda entre os itens, proporcional ao subtotal de cada um.
+  // Calcula em centavos e joga a sobra do arredondamento no último item, para a soma bater.
+  private distribuirDesconto(venda: Venda): void {
+    const itens = venda.itens || [];
+    const descontoCentavos = Math.round((Number(venda.desconto) || 0) * 100);
+    const subtotalCentavos = itens.reduce((acc, item) => acc + Math.round(item.subtotal * 100), 0);
+
+    let restante = descontoCentavos;
+    itens.forEach((item, i) => {
+      const itemCentavos = Math.round(item.subtotal * 100);
+      const parte = descontoCentavos === 0 || subtotalCentavos === 0
+        ? 0
+        : i === itens.length - 1
+          ? restante
+          : Math.round(descontoCentavos * itemCentavos / subtotalCentavos);
+      restante -= parte;
+      item.descontoItem = parte / 100;
+      item.totalComDesconto = (itemCentavos - parte) / 100;
+    });
   }
 
   get vendasFiltradas(): Venda[] {

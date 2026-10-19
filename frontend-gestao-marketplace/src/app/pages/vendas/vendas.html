@@ -2,7 +2,7 @@
   <!-- Lado Esquerdo: Lista de Produtos -->
   <div class="flex-1 flex flex-col p-6 overflow-hidden">
     <div class="mb-6">
-      <h2 class="text-2xl font-bold text-gray-800 mb-4">🛒 Nova Venda</h2>
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">Nova Venda</h2>
       <div class="relative">
         <input 
           type="text" 
@@ -23,7 +23,7 @@
             class="bg-white p-4 rounded-2xl shadow-sm border border-transparent hover:border-green-500 hover:shadow-md transition-all cursor-pointer group"
           >
             <div class="h-32 bg-gray-100 rounded-xl mb-3 overflow-hidden">
-              <img [src]="p.imagem || 'https://via.placeholder.com/200x150?text=Sem+Imagem'" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
+              <img [src]="p.imagem | imagemUrl:'https://via.placeholder.com/200x150?text=Sem+Imagem'" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
             </div>
             <h3 class="font-bold text-gray-800 truncate">{{p.nome}}</h3>
             <div class="flex justify-between items-center mt-2">
@@ -87,14 +87,46 @@
         </select>
       </div>
 
+      <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Desconto</label>
+        <div class="flex gap-2">
+          <div class="flex bg-white rounded-xl shadow-sm p-1 shrink-0">
+            <button type="button" (mousedown)="alterarTipoDesconto('percentual')"
+              class="px-3 rounded-lg text-sm font-bold transition-colors"
+              [ngClass]="descontoTipo === 'percentual' ? 'bg-green-600 text-white' : 'text-gray-500 hover:bg-gray-100'">%</button>
+            <button type="button" (mousedown)="alterarTipoDesconto('valor')"
+              class="px-3 rounded-lg text-sm font-bold transition-colors"
+              [ngClass]="descontoTipo === 'valor' ? 'bg-green-600 text-white' : 'text-gray-500 hover:bg-gray-100'">R$</button>
+          </div>
+          <input type="number" min="0" [max]="descontoTipo === 'percentual' ? 100 : subtotal" step="0.01"
+            [(ngModel)]="descontoValor"
+            [placeholder]="descontoTipo === 'percentual' ? 'Ex: 10 (%)' : 'Ex: 5,00 (R$)'"
+            class="w-full p-3 rounded-xl border-none shadow-sm outline-none focus:ring-2"
+            [ngClass]="erroDesconto ? 'ring-2 ring-red-400 focus:ring-red-400' : 'focus:ring-green-500'">
+        </div>
+        @if (erroDesconto) {
+          <p class="text-xs text-red-500 mt-1">{{ erroDesconto }}</p>
+        }
+      </div>
+
       <div class="pt-4 border-t border-gray-200">
+        @if (desconto > 0) {
+          <div class="flex justify-between text-sm text-gray-500 mb-1">
+            <span>Subtotal</span>
+            <span>R$ {{subtotal | number:'1.2-2'}}</span>
+          </div>
+          <div class="flex justify-between text-sm text-red-500 mb-2">
+            <span>Desconto{{ descontoTipo === 'percentual' ? ' (' + descontoValor + '%)' : '' }}</span>
+            <span>- R$ {{desconto | number:'1.2-2'}}</span>
+          </div>
+        }
         <div class="flex justify-between items-center mb-4">
           <span class="text-gray-500 font-bold">Total</span>
           <span class="text-3xl font-black text-green-600">R$ {{total | number:'1.2-2'}}</span>
         </div>
         <button 
           (mousedown)="finalizarVenda()"
-          [disabled]="carrinho.length === 0"
+          [disabled]="carrinho.length === 0 || !!erroDesconto"
           class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white py-4 rounded-2xl font-bold shadow-lg shadow-green-200 transition-all active:scale-95"
         >
           Finalizar Venda

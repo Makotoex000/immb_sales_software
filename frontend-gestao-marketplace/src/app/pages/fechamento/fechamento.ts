@@ -6,6 +6,7 @@ import { ApiService } from '../../services/api.service';
 interface Venda {
   id: string;
   total: number;
+  desconto?: number;
   formaPagamento: string;
   dataVenda: string;
   itens: any[];
@@ -75,6 +76,10 @@ export class Fechamento implements OnInit {
 
     this.vendasDoDia.forEach(venda => {
       if (venda.itens) {
+        // Desconto da venda é distribuído entre os itens, proporcional ao subtotal de cada um
+        const desconto = Number(venda.desconto) || 0;
+        const fatorDesconto = desconto > 0 ? venda.total / (venda.total + desconto) : 1;
+
         venda.itens.forEach((item: any) => {
           if (!mapaResumo[item.produtoId]) {
             mapaResumo[item.produtoId] = {
@@ -89,7 +94,7 @@ export class Fechamento implements OnInit {
           }
 
           mapaResumo[item.produtoId].quantidadeVendida += item.quantidade;
-          mapaResumo[item.produtoId].valorTotalVenda += item.subtotal;
+          mapaResumo[item.produtoId].valorTotalVenda += item.subtotal * fatorDesconto;
           mapaResumo[item.produtoId].totalCusto += item.valorUnitario * item.quantidade * 0.5;
           mapaResumo[item.produtoId].lucro = mapaResumo[item.produtoId].valorTotalVenda - mapaResumo[item.produtoId].totalCusto;
         });

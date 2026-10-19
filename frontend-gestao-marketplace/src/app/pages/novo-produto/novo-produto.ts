@@ -1,18 +1,17 @@
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ImagemUrlPipe } from '../../pipes/imagem-url.pipe';
 
 @Component({
   selector: 'app-novo-produto',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ImagemUrlPipe],
   templateUrl: './novo-produto.html',
   styleUrl: './novo-produto.css'
 })
 export class NovoProduto {
-  @Output() produtoAdicionado = new EventEmitter<any>();
-  @Output() cancelado = new EventEmitter<void>();
-
   formulario = {
     nome: '',
     valorCompra: 0,
@@ -25,18 +24,45 @@ export class NovoProduto {
   mensagemSucesso: string = '';
   mensagemErro: string = '';
   carregando: boolean = false;
+  enviandoImagem: boolean = false;
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private router: Router) {}
 
   onImagemSelecionada(event: any): void {
     const arquivo = event.target.files[0];
-    if (arquivo) {
-      const leitor = new FileReader();
-      leitor.onload = (e: any) => {
-        this.formulario.imagem = e.target.result;
-      };
-      leitor.readAsDataURL(arquivo);
+    event.target.value = ''; // permite escolher o mesmo arquivo de novo
+    if (arquivo) this.enviarImagem(arquivo);
+  }
+
+  onImagemArrastada(event: DragEvent): void {
+    event.preventDefault();
+    const arquivo = event.dataTransfer?.files[0];
+    if (arquivo) this.enviarImagem(arquivo);
+  }
+
+  // Envia o arquivo ao backend; o produto guarda só o caminho devolvido (/uploads/...)
+  private enviarImagem(arquivo: File): void {
+    if (!arquivo.type.startsWith('image/')) {
+      this.mensagemErro = 'Selecione um arquivo de imagem (JPG, PNG, WEBP ou GIF).';
+      return;
     }
+
+    this.mensagemErro = '';
+    this.enviandoImagem = true;
+    this.apiService.uploadImagem(arquivo).subscribe({
+      next: (response: any) => {
+        this.enviandoImagem = false;
+        this.formulario.imagem = response.data.url;
+      },
+      error: (err: any) => {
+        this.enviandoImagem = false;
+        this.mensagemErro = err.error?.error || 'Erro ao enviar a imagem. Tente novamente.';
+      }
+    });
+  }
+
+  removerImagem(): void {
+    this.formulario.imagem = '';
   }
 
   salvarProduto(): void {
@@ -61,6 +87,11 @@ export class NovoProduto {
       return;
     }
 
+    if (this.enviandoImagem) {
+      this.mensagemErro = 'Aguarde o envio da imagem terminar.';
+      return;
+    }
+
     this.mensagemErro = '';
     this.carregando = true;
 
@@ -78,7 +109,7 @@ export class NovoProduto {
         this.carregando = false;
         if (response.success) {
           this.mensagemSucesso = 'Produto adicionado com sucesso!';
-          this.produtoAdicionado.emit(response.data);
+          this.router.navigate(['/vendas']);
 
           // Limpar formulário
           setTimeout(() => {
@@ -115,6 +146,6 @@ export class NovoProduto {
     };
     this.mensagemErro = '';
     this.mensagemSucesso = '';
-    this.cancelado.emit();
+    this.router.navigate(['/vendas']);
   }
 }

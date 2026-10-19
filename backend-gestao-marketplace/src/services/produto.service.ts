@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getPool } from '../config/database';
 import { Produto, CreateProdutoDTO, UpdateProdutoDTO } from '../types';
 import sql from 'mssql';
+import { uploadService } from './upload.service';
 
 class ProdutoServiceClass {
   async criarProduto(dto: CreateProdutoDTO): Promise<Produto> {
@@ -108,6 +109,11 @@ class ProdutoServiceClass {
       .input('ativo', sql.Bit, dto.ativo !== undefined ? (dto.ativo ? 1 : 0) : (produto.ativo ? 1 : 0))
       .query(`UPDATE Produtos SET nome = @nome, valorCompra = @valorCompra, valorVenda = @valorVenda, quantidade = @quantidade, descricao = @descricao, imagem = @imagem, ativo = @ativo WHERE id = @id`);
 
+    // Imagem trocada: apaga o arquivo antigo
+    if (dto.imagem && dto.imagem !== produto.imagem) {
+      await uploadService.removerImagem(produto.imagem);
+    }
+
     return await this.obterProdutoPorId(id);
   }
 
@@ -130,10 +136,13 @@ class ProdutoServiceClass {
 
   async deletarProduto(id: string): Promise<boolean> {
     const pool = getPool();
+    const produto = await this.obterProdutoPorId(id);
     const result = await pool.request()
       .input('id', sql.NVarChar(50), id)
       .query(`DELETE FROM Produtos WHERE id = @id`);
-    return result.rowsAffected[0] > 0;
+    const deletado = result.rowsAffected[0] > 0;
+    if (deletado) await uploadService.removerImagem(produto?.imagem);
+    return deletado;
   }
 
   async decrementarEstoque(produtoId: string, quantidade: number): Promise<void> {

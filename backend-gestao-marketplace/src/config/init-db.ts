@@ -47,8 +47,7 @@ export async function initializeDatabase(): Promise<void> {
         quantidade INT NOT NULL,
         valorUnitario DECIMAL(10, 2) NOT NULL,
         subtotal DECIMAL(10, 2) NOT NULL,
-        FOREIGN KEY (vendaId) REFERENCES Vendas(id),
-        FOREIGN KEY (produtoId) REFERENCES Produtos(id)
+        FOREIGN KEY (vendaId) REFERENCES Vendas(id)
       );
     `);
     console.log('✅ Tabela ItensVenda criada/verificada');
@@ -77,8 +76,7 @@ export async function initializeDatabase(): Promise<void> {
         quantidade INT NOT NULL,
         valorUnitario DECIMAL(10, 2) NOT NULL,
         subtotal DECIMAL(10, 2) NOT NULL,
-        FOREIGN KEY (vendaFiadoId) REFERENCES VendasFiado(id),
-        FOREIGN KEY (produtoId) REFERENCES Produtos(id)
+        FOREIGN KEY (vendaFiadoId) REFERENCES VendasFiado(id)
       );
     `);
     console.log('✅ Tabela ItensFiado criada/verificada');
@@ -107,11 +105,39 @@ export async function initializeDatabase(): Promise<void> {
         quantidadeVendida INT NOT NULL,
         valorTotalVenda DECIMAL(10, 2) NOT NULL,
         lucro DECIMAL(10, 2) NOT NULL,
-        FOREIGN KEY (relatorioId) REFERENCES Relatorios(id),
-        FOREIGN KEY (produtoId) REFERENCES Produtos(id)
+        FOREIGN KEY (relatorioId) REFERENCES Relatorios(id)
       );
     `);
     console.log('✅ Tabela ResumoProdutosRelatorio criada/verificada');
+
+    // Colunas adicionadas depois da criação original das tabelas
+    await pool.request().query(`
+      IF COL_LENGTH('Vendas', 'nomeCliente') IS NULL
+        ALTER TABLE Vendas ADD nomeCliente NVARCHAR(255) NULL;
+      IF COL_LENGTH('Vendas', 'descontoTipo') IS NULL
+        ALTER TABLE Vendas ADD descontoTipo NVARCHAR(20) NULL;
+      IF COL_LENGTH('Vendas', 'descontoValor') IS NULL
+        ALTER TABLE Vendas ADD descontoValor DECIMAL(10, 2) NOT NULL DEFAULT 0;
+      IF COL_LENGTH('Vendas', 'desconto') IS NULL
+        ALTER TABLE Vendas ADD desconto DECIMAL(10, 2) NOT NULL DEFAULT 0;
+      IF COL_LENGTH('VendasFiado', 'desconto') IS NULL
+        ALTER TABLE VendasFiado ADD desconto DECIMAL(10, 2) NOT NULL DEFAULT 0;
+    `);
+    console.log('✅ Colunas de desconto criadas/verificadas');
+
+    // Itens de venda/fiado e resumos de relatório guardam cópia do nome e do preço do produto,
+    // então não precisam de chave estrangeira para Produtos. Sem ela, excluir um produto
+    // não é bloqueado e o histórico de vendas continua intacto.
+    await pool.request().query(`
+      DECLARE @sql NVARCHAR(MAX) = N'';
+      SELECT @sql += N'ALTER TABLE ' + QUOTENAME(OBJECT_NAME(parent_object_id))
+                   + N' DROP CONSTRAINT ' + QUOTENAME(name) + N'; '
+      FROM sys.foreign_keys
+      WHERE referenced_object_id = OBJECT_ID('Produtos')
+        AND OBJECT_NAME(parent_object_id) IN ('ItensVenda', 'ItensFiado', 'ResumoProdutosRelatorio');
+      EXEC sp_executesql @sql;
+    `);
+    console.log('✅ Vínculos com Produtos removidos do histórico (exclusão de produto liberada)');
 
     console.log('✅ Banco de dados inicializado com sucesso!');
   } catch (error) {

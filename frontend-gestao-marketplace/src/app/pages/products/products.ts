@@ -2,11 +2,13 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { ApiService } from '../../services/api.service';
+import { ImagemUrlPipe } from '../../pipes/imagem-url.pipe';
 
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ImagemUrlPipe],
   templateUrl: './products.html',
   styleUrl: './products.css'
 } )
@@ -14,6 +16,8 @@ export class Products implements OnInit {
   produtos: any[] = [];
   apiUrl = 'http://localhost:3000/api/produtos';
   private http = inject(HttpClient );
+  private apiService = inject(ApiService);
+  enviandoImagem = false;
   exibirModal = false;
   produtoSelecionado: any = { nome: '', valorVenda: 0, quantidade: 0, imagem: '' };
 
@@ -35,7 +39,30 @@ export class Products implements OnInit {
 
   fecharModal() { this.exibirModal = false; }
 
+  // Envia a nova imagem; ela só substitui a antiga ao salvar o produto
+  onImagemSelecionada(event: any) {
+    const arquivo: File = event.target.files[0];
+    event.target.value = '';
+    if (!arquivo) return;
+
+    this.enviandoImagem = true;
+    this.apiService.uploadImagem(arquivo).subscribe({
+      next: (res: any) => {
+        this.enviandoImagem = false;
+        this.produtoSelecionado.imagem = res.data.url;
+      },
+      error: (err) => {
+        this.enviandoImagem = false;
+        alert(err.error?.error || 'Erro ao enviar a imagem.');
+      }
+    });
+  }
+
   salvarProduto() {
+    if (this.enviandoImagem) {
+      alert('Aguarde o envio da imagem terminar.');
+      return;
+    }
     this.http.put(`${this.apiUrl}/${this.produtoSelecionado.id}`, this.produtoSelecionado ).subscribe({
       next: () => { this.carregarProdutos(); this.fecharModal(); }
     });

@@ -42,10 +42,16 @@ export interface ItemVenda {
   subtotal: number;
 }
 
+export type DescontoTipo = 'percentual' | 'valor';
+
 export interface Venda {
   id: string;
   itens: ItemVenda[];
-  total: number;
+  subtotal: number;          // soma dos itens, antes do desconto
+  desconto: number;          // valor do desconto em R$
+  descontoTipo?: DescontoTipo;
+  descontoValor?: number;    // o que foi digitado (% ou R$)
+  total: number;             // subtotal - desconto
   formaPagamento: string;
   dataVenda: Date;
   status: 'concluida' | 'cancelada' | 'fiado';
@@ -64,6 +70,8 @@ export interface CreateVendaDTO {
   formaPagamento: string;
   status?: string;
   nomeCliente?: string;
+  descontoTipo?: DescontoTipo;
+  descontoValor?: number;
 }
 
 export interface CreateVendaWithStatusDTO extends CreateVendaDTO {
@@ -75,6 +83,7 @@ export interface VendaFiado {
   id: string;
   nomeBuyer: string;
   itens: ItemVenda[];
+  desconto: number;          // valor do desconto em R$ (já abatido do total)
   total: number;
   dataVenda: Date;
   status: 'aberto' | 'fechado';
@@ -84,6 +93,8 @@ export interface CreateVendaFiadoDTO {
   nomeBuyer: string;
   itens: any[];
   total: number;
+  descontoTipo?: DescontoTipo;
+  descontoValor?: number;
 }
 
 export interface UpdateVendaFiadoDTO {

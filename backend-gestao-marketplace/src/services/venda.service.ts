@@ -1,8 +1,46 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getPool } from '../config/database';
-import { Venda, CreateVendaDTO, ItemVenda, CreateItemVendaDTO } from '../types';
+import { Venda, CreateVendaDTO, ItemVenda, DescontoTipo } from '../types';
 import { produtoService } from './produto.service';
 import sql from 'mssql';
+
+const arredondar = (valor: number) => Math.round(valor * 100) / 100;
+
+// Converte o desconto digitado (% ou R$) em valor em R$, validando os limites
+export function calcularDesconto(subtotal: number, tipo?: DescontoTipo, valor?: number): number {
+  if (!tipo || !valor) return 0;
+  if (valor < 0) throw new Error('Desconto não pode ser negativo');
+  if (tipo === 'percentual') {
+    if (valor > 100) throw new Error('Desconto percentual não pode passar de 100%');
+    return arredondar(subtotal * valor / 100);
+  }
+  if (tipo === 'valor') {
+    if (valor > subtotal) throw new Error('Desconto não pode ser maior que o subtotal da venda');
+    return arredondar(valor);
+  }
+  throw new Error(`Tipo de desconto inválido: ${tipo}`);
+}
+
+export function somarItens(itens: { subtotal: number }[]): number {
+  return arredondar(itens.reduce((acc, item) => acc + Number(item.subtotal), 0));
+}
+
+function mapearVenda(row: any, itens: ItemVenda[]): Venda {
+  const desconto = Number(row.desconto) || 0;
+  return {
+    id: row.id,
+    itens,
+    subtotal: arredondar(Number(row.total) + desconto),
+    desconto,
+    descontoTipo: row.descontoTipo || undefined,
+    descontoValor: row.descontoTipo ? Number(row.descontoValor) : undefined,
+    total: row.total,
+    formaPagamento: row.formaPagamento,
+    dataVenda: row.dataVenda,
+    status: row.status,
+    nomeCliente: row.nomeCliente || undefined,
+  };
+}
 
 class VendaServiceClass {
   async criarVenda(dto: CreateVendaDTO): Promise<Venda> {
@@ -12,14 +50,24 @@ class VendaServiceClass {
     const status = dto.status || 'concluida';
     const nomeCliente = dto.nomeCliente || null;
 
+    // Com desconto, o total é recalculado aqui a partir dos itens (não confia no total do cliente)
+    const descontoTipo = dto.descontoTipo && dto.descontoValor ? dto.descontoTipo : null;
+    const descontoValor = descontoTipo ? Number(dto.descontoValor) : 0;
+    const subtotal = somarItens(dto.itens);
+    const desconto = calcularDesconto(subtotal, descontoTipo || undefined, descontoValor);
+    const total = descontoTipo ? arredondar(subtotal - desconto) : dto.total;
+
     await pool.request()
       .input('id', sql.NVarChar(50), id)
-      .input('total', sql.Decimal(10, 2), dto.total)
+      .input('total', sql.Decimal(10, 2), total)
       .input('formaPagamento', sql.NVarChar(20), dto.formaPagamento)
       .input('dataVenda', sql.DateTime, agora)
       .input('status', sql.NVarChar(20), status)
       .input('nomeCliente', sql.NVarChar(255), nomeCliente)
-      .query(`INSERT INTO Vendas (id, total, formaPagamento, dataVenda, status, nomeCliente) VALUES (@id, @total, @formaPagamento, @dataVenda, @status, @nomeCliente)`);
+      .input('descontoTipo', sql.NVarChar(20), descontoTipo)
+      .input('descontoValor', sql.Decimal(10, 2), descontoValor)
+      .input('desconto', sql.Decimal(10, 2), desconto)
+      .query(`INSERT INTO Vendas (id, total, formaPagamento, dataVenda, status, nomeCliente, descontoTipo, descontoValor, desconto) VALUES (@id, @total, @formaPagamento, @dataVenda, @status, @nomeCliente, @descontoTipo, @descontoValor, @desconto)`);
 
     const itens: ItemVenda[] = [];
     for (const item of dto.itens) {
@@ -44,7 +92,7 @@ class VendaServiceClass {
       }
     }
 
-    return { id, itens, total: dto.total, formaPagamento: dto.formaPagamento, dataVenda: agora, status: status as any, nomeCliente: nomeCliente || undefined };
+    return { id, itens, subtotal: arredondar(total + desconto), desconto, descontoTipo: descontoTipo || undefined, descontoValor: descontoTipo ? descontoValor : undefined, total, formaPagamento: dto.formaPagamento, dataVenda: agora, status: status as any, nomeCliente: nomeCliente || undefined };
   }
 
   async obterTodasVendas(): Promise<Venda[]> {
@@ -53,7 +101,7 @@ class VendaServiceClass {
     const vendas: Venda[] = [];
     for (const row of result.recordset) {
       const itens = await this.obterItensPorVendaId(row.id);
-      vendas.push({ id: row.id, itens, total: row.total, formaPagamento: row.formaPagamento, dataVenda: row.dataVenda, status: row.status, nomeCliente: row.nomeCliente || undefined });
+      vendas.push(mapearVenda(row, itens));
     }
     return vendas;
   }
@@ -64,7 +112,7 @@ class VendaServiceClass {
     if (result.recordset.length === 0) return null;
     const row = result.recordset[0];
     const itens = await this.obterItensPorVendaId(id);
-    return { id: row.id, itens, total: row.total, formaPagamento: row.formaPagamento, dataVenda: row.dataVenda, status: row.status, nomeCliente: row.nomeCliente || undefined };
+    return mapearVenda(row, itens);
   }
 
   async obterVendasPorData(data: Date): Promise<Venda[]> {
@@ -75,7 +123,7 @@ class VendaServiceClass {
     const vendas: Venda[] = [];
     for (const row of result.recordset) {
       const itens = await this.obterItensPorVendaId(row.id);
-      vendas.push({ id: row.id, itens, total: row.total, formaPagamento: row.formaPagamento, dataVenda: row.dataVenda, status: row.status, nomeCliente: row.nomeCliente || undefined });
+      vendas.push(mapearVenda(row, itens));
     }
     return vendas;
   }

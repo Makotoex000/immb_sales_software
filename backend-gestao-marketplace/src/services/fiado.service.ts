@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getPool } from '../config/database';
 import { VendaFiado, CreateVendaFiadoDTO, UpdateVendaFiadoDTO, ItemVenda, CreateItemVendaDTO } from '../types';
 import { produtoService } from './produto.service';
+import { calcularDesconto, somarItens } from './venda.service';
 import sql from 'mssql';
 
 class FiadoServiceClass {
@@ -10,15 +11,22 @@ class FiadoServiceClass {
     const id = uuidv4();
     const agora = new Date();
 
+    // Com desconto, o total é recalculado aqui a partir dos itens
+    const temDesconto = !!(dto.descontoTipo && dto.descontoValor);
+    const subtotal = somarItens(dto.itens);
+    const desconto = calcularDesconto(subtotal, dto.descontoTipo, dto.descontoValor);
+    const total = temDesconto ? Math.round((subtotal - desconto) * 100) / 100 : dto.total;
+
     await pool
       .request()
       .input('id', sql.NVarChar(50), id)
       .input('nomeBuyer', sql.NVarChar(255), dto.nomeBuyer)
-      .input('total', sql.Decimal(10, 2), dto.total)
+      .input('total', sql.Decimal(10, 2), total)
+      .input('desconto', sql.Decimal(10, 2), desconto)
       .input('dataVenda', sql.DateTime, agora)
       .query(`
-        INSERT INTO VendasFiado (id, nomeBuyer, total, dataVenda, status)
-        VALUES (@id, @nomeBuyer, @total, @dataVenda, 'aberto')
+        INSERT INTO VendasFiado (id, nomeBuyer, total, desconto, dataVenda, status)
+        VALUES (@id, @nomeBuyer, @total, @desconto, @dataVenda, 'aberto')
       `);
 
     const itens: ItemVenda[] = [];
@@ -58,7 +66,8 @@ class FiadoServiceClass {
       id,
       nomeBuyer: dto.nomeBuyer,
       itens,
-      total: dto.total,
+      desconto,
+      total,
       dataVenda: agora,
       status: 'aberto',
     };
@@ -78,6 +87,7 @@ class FiadoServiceClass {
         id: row.id,
         nomeBuyer: row.nomeBuyer,
         itens,
+        desconto: Number(row.desconto) || 0,
         total: row.total,
         dataVenda: row.dataVenda,
         status: row.status,
@@ -104,6 +114,7 @@ class FiadoServiceClass {
         id: row.id,
         nomeBuyer: row.nomeBuyer,
         itens,
+        desconto: Number(row.desconto) || 0,
         total: row.total,
         dataVenda: row.dataVenda,
         status: row.status,
@@ -134,6 +145,7 @@ class FiadoServiceClass {
       id: row.id,
       nomeBuyer: row.nomeBuyer,
       itens,
+      desconto: Number(row.desconto) || 0,
       total: row.total,
       dataVenda: row.dataVenda,
       status: row.status,
@@ -248,6 +260,7 @@ class FiadoServiceClass {
   nomeBuyer: string;
   ids: string[];
   itens: ItemVenda[];
+  desconto: number;
   total: number;
   dataUltimaVenda: Date;
 }[]> {
@@ -262,6 +275,7 @@ class FiadoServiceClass {
     nomeBuyer: string;
     ids: string[];
     itens: ItemVenda[];
+    desconto: number;
     total: number;
     dataUltimaVenda: Date;
   }> = {};
@@ -275,6 +289,7 @@ class FiadoServiceClass {
         nomeBuyer: nome,
         ids: [],
         itens: [],
+        desconto: 0,
         total: 0,
         dataUltimaVenda: row.dataVenda,
       };
@@ -282,6 +297,7 @@ class FiadoServiceClass {
 
     grupos[nome].ids.push(row.id);
     grupos[nome].total += Number(row.total);
+    grupos[nome].desconto += Number(row.desconto) || 0;
 
     if (row.dataVenda > grupos[nome].dataUltimaVenda) {
       grupos[nome].dataUltimaVenda = row.dataVenda;

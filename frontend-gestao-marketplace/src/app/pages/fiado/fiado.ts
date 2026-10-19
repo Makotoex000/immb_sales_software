@@ -6,6 +6,7 @@ import { ApiService } from '../../services/api.service';
 interface VendaFiadoAgrupado {
   nomeBuyer: string;
   ids: string[];
+  desconto?: number;
   total: number;
   dataUltimaVenda: Date;
   itens?: any[];

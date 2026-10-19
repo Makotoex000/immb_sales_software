@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
+import { exportarFechamentoExcel } from '../../services/relatorio-excel';
 
 interface Relatorio {
   id: string;
@@ -81,44 +82,42 @@ export class Gerenciamento implements OnInit {
     }, 0);
   }
 
+  exportando: boolean = false;
+
+  // Gera o .xlsx do fechamento (aba de resumo por produto + aba com as vendas do dia)
   exportarParaExcel(): void {
     if (!this.relatorioAtual) {
       this.mensagemErro = 'Nenhum relatório para exportar';
       return;
     }
 
-    try {
-      // Criar CSV
-      let csv = 'RELATÓRIO DE VENDAS\n';
-      csv += `Data: ${this.dataSelecionada}\n`;
-      csv += `Total de Vendas: ${this.relatorioAtual.totalVendas}\n`;
-      csv += `Total Vendido: R$ ${this.totalVendido.toFixed(2)}\n`;
-      csv += `Total de Custo: R$ ${this.totalCusto.toFixed(2)}\n`;
-      csv += `Lucro Total: R$ ${this.relatorioAtual.lucroTotal.toFixed(2)}\n\n`;
+    const relatorio = this.relatorioAtual;
+    this.exportando = true;
+    this.mensagemErro = '';
 
-      csv += 'Produto,Quantidade Vendida,Total de Venda,Lucro\n';
-      this.relatorioAtual.resumoProdutos.forEach((resumo: any) => {
-        csv += `"${resumo.nomeProduto}",${resumo.quantidadeVendida},"R$ ${resumo.valorTotalVenda.toFixed(2)}","R$ ${resumo.lucro.toFixed(2)}"\n`;
-      });
+    const gerar = (vendas: any[] | null) => {
+      exportarFechamentoExcel({
+        dataCaixa: this.dataSelecionada,
+        totalVendas: relatorio.totalVendas,
+        resumoProdutos: relatorio.resumoProdutos,
+        vendas,
+      })
+        .then(() => {
+          this.mensagemSucesso = 'Relatório exportado com sucesso!';
+          setTimeout(() => (this.mensagemSucesso = ''), 2000);
+        })
+        .catch((error) => {
+          console.error('Erro ao exportar relatório:', error);
+          this.mensagemErro = 'Erro ao exportar relatório. Tente novamente.';
+        })
+        .finally(() => (this.exportando = false));
+    };
 
-      // Criar blob e download
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `relatorio_vendas_${this.dataSelecionada}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      this.mensagemSucesso = 'Relatório exportado com sucesso!';
-      setTimeout(() => {
-        this.mensagemSucesso = '';
-      }, 2000);
-    } catch (error) {
-      this.mensagemErro = 'Erro ao exportar relatório. Tente novamente.';
-    }
+    // Se não conseguir buscar as vendas do dia, exporta só o resumo
+    this.apiService.obterVendasPorData(this.dataSelecionada).subscribe({
+      next: (response: any) => gerar(response.success ? response.data || [] : null),
+      error: () => gerar(null),
+    });
   }
 
   abrirModalDeletar(): void {
